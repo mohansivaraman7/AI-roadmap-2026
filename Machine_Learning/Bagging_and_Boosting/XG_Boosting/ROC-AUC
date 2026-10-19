@@ -1,0 +1,9 @@
+Class Setosa   ---> 1
+Class Virginca ---> 0
+
+AUC = 1 (Threshold)
+
+prediction ---> 0.9
+
+Auc = 0.8
+Auc = 0.5

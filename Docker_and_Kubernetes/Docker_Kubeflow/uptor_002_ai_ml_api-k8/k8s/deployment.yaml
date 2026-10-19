@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: house-price-api
+  labels:
+    app: house-price-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: house-price-api
+  template:
+    metadata:
+      labels:
+        app: house-price-api
+    spec:
+      containers:
+        - name: house-price-api
+          image: house-price-api:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            # "mlflow-service" is the Kubernetes Service from
+            # mlflow-service.yaml, not a Pod name or IP -- it stays valid
+            # even after the mlflow Pod behind it restarts and gets a new
+            # IP. Same role as MLFLOW_TRACKING_URI=http://mlflow:5000 in
+            # docker-compose.yml, just resolved by cluster DNS instead of
+            # Compose's network.
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow-service:5000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 20

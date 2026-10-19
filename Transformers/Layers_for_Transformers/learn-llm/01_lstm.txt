@@ -1,0 +1,161 @@
+======================================================================
+ 01 — LSTM (Long Short-Term Memory)
+ Program: 01_lstm.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 The problem: language is a SEQUENCE
+----------------------------------------------------------------------
+A normal neural network takes a fixed-size input (e.g. an image) and
+gives an output. But sentences have different lengths, and ORDER matters:
+   "dog bites man"  vs  "man bites dog"
+We need a model that reads tokens in order and remembers what came before.
+
+
+1.2 First attempt: the RNN (Recurrent Neural Network)
+----------------------------------------------------------------------
+Idea: read one word at a time, and carry a "running summary" vector h.
+
+     word1      word2      word3
+       |          |          |
+       v          v          v
+   [ cell ] --> [ cell ] --> [ cell ] --> h (summary of whole sentence)
+          h1         h2
+
+The SAME cell (same weights) is reused at every step. That's the
+"recurrent" part. h is called the HIDDEN STATE.
+
+Problem: in long sentences, info from early words FADES. By word 50,
+word 1 is almost forgotten. This is called the VANISHING GRADIENT
+problem: during training, the correction signal shrinks a little at
+every step backwards, until it's ~0 and early words never get learned.
+
+
+1.3 The fix: LSTM (1997, Hochreiter & Schmidhuber)
+----------------------------------------------------------------------
+LSTM adds a second vector: the CELL STATE c = a "conveyor belt" of
+long-term memory that runs through the whole sequence. Information
+can ride on it for a long time with little change.
+
+Three GATES control the belt. A gate is just a sigmoid (0..1) that acts
+like a dial / valve:
+
+   FORGET gate (f) : how much old memory to keep.   0 = erase, 1 = keep all
+   INPUT  gate (i) : how much new info to write.     0 = ignore, 1 = write
+   OUTPUT gate (o) : how much memory to reveal as h. 0 = hide,  1 = show
+
+Plus a CANDIDATE (g): the new information that might be written (tanh, -1..1).
+
+The two equations that matter:
+
+   c_new = f * c_old  +  i * g        (forget some old, add some new)
+   h_new = o * tanh(c_new)            (show part of the memory)
+
+ANALOGY — a student taking notes in a lecture:
+   forget gate : crosses out notes that are no longer relevant
+   input gate  : decides which new sentence is worth writing down
+   output gate : decides what to say when the teacher asks a question
+   cell state  : the notebook
+   hidden state: what the student says out loud right now
+
+
+1.4 Why LSTMs were not the end of the story
+----------------------------------------------------------------------
+LSTMs powered Google Translate, Siri, keyboards (~2014–2017). But:
+  (a) BOTTLENECK: the whole sentence must squeeze into one vector h.
+  (b) SLOW: word 5 can't be processed until word 4 is done.
+      You can't use thousands of GPU cores in parallel.
+  (c) Memory still fades over very long text (hundreds of words).
+These three problems lead directly to ATTENTION (step 2).
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+hidden state (h)   : the LSTM's current output / short-term summary
+cell state (c)     : the LSTM's long-term memory
+gate               : a 0..1 dial made with sigmoid
+H, D               : hidden size (3) and input size (2) in Part A
+SEQ                : sequence length (10 numbers)
+VOCAB              : how many different tokens exist (0,1,2,3,4 -> 5)
+nn.LSTM            : PyTorch's ready-made, fast LSTM
+batch_first=True   : tensors are shaped (Batch, Time, Dim)
+h[-1]              : the hidden state after the LAST token
+.chunk(4)          : split one tensor into 4 equal pieces
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+
+--- Part A: an LSTM cell written by hand ---
+
+  def lstm_cell(x, h, c, W, U, b):
+      gates = x @ W + h @ U + b
+  -> Combine the current word (x) and the previous hidden state (h).
+     W, U are learned matrices. We compute ALL 4 gates in one multiply
+     (that's why the matrices have 4*H columns) — this is a speed trick.
+
+      i, f, g, o = gates.chunk(4, dim=-1)
+  -> Split the result into the 4 parts: input, forget, candidate, output.
+
+      i, f, o = torch.sigmoid(...)   g = torch.tanh(g)
+  -> Gates become 0..1 dials; candidate becomes -1..1 information.
+
+      c = f * c + i * g
+      h = o * torch.tanh(c)
+  -> The two equations from section 1.3. That's the whole LSTM.
+
+  for t, x in enumerate(sentence):
+      h, c = lstm_cell(x, h, c, W, U, b)
+  -> THE KEY LINE: a loop over time. Each word updates h and c, and the
+     new h, c are fed into the next step. This loop is why LSTMs are slow.
+
+  The weights here are random, so the h values printed have no meaning.
+  The point is to SEE h change as each word is read.
+
+--- Part B: can an LSTM actually remember? ---
+
+  def make_batch(n=64):
+      x = torch.randint(0, VOCAB, (n, SEQ))
+      return x, x[:, 0]
+  -> Make 64 random sequences of 10 numbers. The correct answer for each
+     is its FIRST number. To get it right, the LSTM must remember token 1
+     through 9 more steps of distraction. A pure memory test.
+
+  class Rememberer(nn.Module):
+      self.emb  = nn.Embedding(VOCAB, 16)   # number -> 16-dim vector
+      self.lstm = nn.LSTM(16, 32, ...)      # reads the sequence, 32-dim memory
+      self.head = nn.Linear(32, VOCAB)      # memory -> 5 scores (one per answer)
+  -> Classic pattern: EMBED -> PROCESS -> PREDICT.
+
+      out, (h, c) = self.lstm(self.emb(x))
+      return self.head(h[-1])
+  -> Use ONLY the final hidden state to answer. Everything the model knows
+     about the sequence must be inside that one vector = the BOTTLENECK.
+
+  The training loop is the standard loop from 00_basics.txt.
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+   step   0  loss 1.596  accuracy 39%     <- random guessing (~20% expected)
+   step 100  loss 0.505  accuracy 88%     <- learning to use the forget gate
+   step 200  loss 0.008  accuracy 100%    <- it reliably keeps token 1 in memory
+
+A random guess among 5 answers gives loss ≈ ln(5) ≈ 1.6. That's why
+loss starts near 1.6.
+
+
+PART 5: DISCUSSION QUESTIONS FOR THE CLASS
+======================================================================
+1. Change SEQ = 10 to SEQ = 100. What happens to accuracy and speed? Why?
+2. Why do we use h[-1] and not h at the first step?
+3. If you had 1,000 GPU cores, could they all work on one sentence at once
+   with an LSTM? (No — each step waits for the previous one.)
+4. In one sentence: what problem does the cell state solve?
+   (It lets information travel far without fading.)
+
+ONE-LINE SUMMARY: An LSTM reads tokens one at a time and uses gates to
+decide what to remember — but it's sequential and squeezes everything
+through one vector.

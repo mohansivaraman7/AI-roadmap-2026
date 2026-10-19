@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  labels:
+    app: mlflow
+spec:
+  # A single replica on purpose: this server's backend store is a SQLite
+  # file on the PVC below, and SQLite doesn't handle concurrent writers
+  # from multiple Pods safely. (A team-scale setup would swap this for a
+  # Postgres backend and could then run more than one replica.) Contrast
+  # with the api Deployment's replicas: 2 -- the api is stateless, so
+  # scaling it is just "run more copies"; this tracking server isn't.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: mlflow-house-price:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: mlflow-data
+              mountPath: /mlflow
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+      volumes:
+        - name: mlflow-data
+          persistentVolumeClaim:
+            claimName: mlflow-data

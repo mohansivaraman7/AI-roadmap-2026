@@ -1,0 +1,53 @@
+SLIDE 11 / 12  -  lr: the learning rate
+Image: 11_learning_rate.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The update formula, three loss curves (too high, just right, too low), how to
+read numbers like 2e-5, typical values, and schedulers.
+
+WHAT IT IS
+lr = learning rate. It controls HOW BIG a step the optimizer takes each time
+it updates the weights.
+  new_weight = old_weight - lr x gradient
+The gradient gives the DIRECTION that reduces the error; lr gives the SIZE of
+the step. (AdamW adjusts the step per weight, but lr still sets the overall
+scale.)
+
+ANALOGY
+Walking down a foggy hill to reach the lowest point (minimum loss). The
+gradient tells you which way is downhill; the learning rate is your stride.
+
+THE THREE CURVES
+- Too high: huge steps overshoot the bottom. Loss bounces around, goes up, or
+  becomes "nan".
+- Just right: loss drops smoothly.
+- Too low: tiny steps. Loss barely moves.
+
+READING THE NUMBERS (scientific notation)
+  1e-3 = 0.001      2e-4 = 0.0002
+  5e-5 = 0.00005    2e-5 = 0.00002
+
+TYPICAL VALUES
+  Full fine-tuning          1e-5 to 5e-5   (pretrained weights are already
+                                            good: make small careful changes)
+  Manual partial (BERT)     2e-5 to 5e-5
+  LoRA / QLoRA              1e-4 to 3e-4   (adapters start from scratch, B = 0,
+                                            so they need bigger steps)
+  Training from scratch     1e-4 to 1e-3
+
+SCHEDULERS: THE lr CHANGES DURING TRAINING
+- Warmup: start very small and increase over the first steps, to avoid big
+  early mistakes.
+- Decay: gradually reduce it toward the end, for fine adjustments.
+  from transformers import get_linear_schedule_with_warmup
+  scheduler = get_linear_schedule_with_warmup(optimizer,
+                  num_warmup_steps=50, num_training_steps=500)
+  # in the loop, after optimizer.step():  scheduler.step()
+The Hugging Face Trainer does this automatically.
+
+PRACTICAL RULE
+Loss explodes -> LOWER lr. Loss barely moves -> RAISE lr.
+
+CLASS EXERCISE
+Run the 8-sentence demo with lr = 1e-2, 2e-5 and 1e-8 and compare the
+printed loss values. Students will see all three curves for real.

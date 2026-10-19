@@ -1,0 +1,40 @@
+Support Vector Machine:
+
+1. It is supervised algorithm
+2. It can also be used for both regression and classification
+3. It is also based on distance .
+4. Important points to keep in mind.
+   4.1 HyperPlane
+   4.2 Margin (distance between the margin)
+   4.3 Support Vector
+   4.4 Kernel
+5. SVM can be used for both type of output.
+   5.1 But it is specifically used for Classification.
+      5.1.1 In Classification it is specifically used for "Binary"
+
+Key Concepts:
+-------------
+Hyperplane: A decision boundary that separates different classes in the feature space.
+
+Support Vectors: The data points that are closest to the hyperplane.
+                 These points are critical for defining the hyperplane and hence the model.
+
+Kernel Trick: SVMs can use kernel functions to transform the input data into a higher-dimensional space, allowing for non-linear separation of classes.
+
+                Common kernels include:
+                -------------------------
+                Linear
+                Polynomial
+                Radial Basis Function (RBF)
+
+
+
+
+Margin: The distance between the hyperplane and the nearest data points from either class. SVM aims to maximize this margin.
+Advantages:
+Effective in high-dimensional spaces.
+Robust against overfitting, especially in high-dimensional datasets.
+Can handle non-linear relationships using kernel functions.
+Disadvantages:
+Performance can be affected by the choice of kernel and hyperparameters.
+Not suitable for very large datasets due to computational complexity.

@@ -1,0 +1,55 @@
+SLIDE 07 / 12  -  NF4: the 4-bit NormalFloat format
+Image: 07_nf4_format.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A bell curve of typical model weights, with two rows of tick marks comparing
+where INT4 and NF4 place their 16 levels, plus the four steps of block-wise
+quantization and double quantization.
+
+THE PROBLEM
+4 bits can represent only 2^4 = 16 different values. Every weight must be
+rounded to one of 16 levels. The question is WHERE to place those levels so the
+rounding error is as small as possible.
+
+THE KEY OBSERVATION
+In a trained model most weights are small numbers close to zero; only a few are
+large. This is roughly a normal (bell-curve) distribution - the "Normal" in
+NormalFloat.
+
+INT4 vs NF4
+- INT4 spaces its 16 levels EVENLY from -1 to +1.
+- NF4 places its levels CLOSER TOGETHER near zero (where most weights are) and
+  further apart at the edges. Technically each level covers an equal share of
+  the bell curve (quantiles of the normal distribution).
+Result: most weights get rounded to a NEARBY level, so the total error is
+smaller. The tick marks on the slide use the real NF4 level values.
+
+HOW WEIGHTS ARE CONVERTED (BLOCK-WISE)
+1. Split the weights into blocks of 64.
+2. Divide every weight in a block by the block's largest absolute value, so
+   they fall between -1 and +1. Save that scale factor.
+3. Round each scaled weight to the nearest NF4 level and store it as a 4-bit
+   code (0 - 15).
+4. When needed: code -> level x scale = approximately the original weight,
+   computed in 16-bit.
+
+SMALL EXAMPLE
+  Original weights :  0.12   -0.03    0.40   -0.80
+  Max absolute     :  0.80  (divide everything by 0.80)
+  Scaled           :  0.15   -0.04    0.50   -1.00
+  Rounded to NF4   :  nearest of the 16 levels, stored as 4-bit codes
+
+DOUBLE QUANTIZATION
+Every block of 64 has its own scale factor, and those take memory too. Double
+quantization compresses the scale factors themselves, saving about 0.4 bits
+per weight (about 3 GB on a 65B model, per the QLoRA paper).
+In code: bnb_4bit_use_double_quant=True
+
+THE THREE 4-BIT OPTIONS
+  INT4  evenly spaced levels           lowest accuracy for weights
+  FP4   floating-point style levels    better
+  NF4   dense near zero (bell curve)   best for normally distributed weights
+
+ANALOGY
+If most of a city lives in the centre, put more bus stops in the centre and
+fewer in the suburbs. Most people then have a stop close by.

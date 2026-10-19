@@ -1,0 +1,10 @@
+[
+  {"q": "What is the minimum balance for a savings account?", "a": "The minimum balance for a Northwind savings account is 500 dollars.", "category": "accounts"},
+  {"q": "How long does a domestic transfer take?", "a": "Domestic transfers are completed within 1 business day.", "category": "payments"},
+  {"q": "What is the daily ATM withdrawal limit?", "a": "The daily ATM withdrawal limit is 1000 dollars.", "category": "cards"},
+  {"q": "How do I block a lost debit card?", "a": "Open the Northwind app, go to Cards and tap Block Card. You can also call 1800-555-0142.", "category": "cards"},
+  {"q": "What is the fee for an international transfer?", "a": "International transfers cost a flat fee of 15 dollars.", "category": "payments"},
+  {"q": "How do I dispute an unknown transaction?", "a": "Open the transaction in the app and tap Report a Problem. Disputes are reviewed within 7 business days.", "category": "payments"},
+  {"q": "What is the interest rate on a fixed deposit?", "a": "Fixed deposits earn 6 percent per year for a 12 month term.", "category": "accounts"},
+  {"q": "Can I open an account online?", "a": "Yes. Upload a photo ID and proof of address in the app and the account opens in 1 business day.", "category": "accounts"}
+]

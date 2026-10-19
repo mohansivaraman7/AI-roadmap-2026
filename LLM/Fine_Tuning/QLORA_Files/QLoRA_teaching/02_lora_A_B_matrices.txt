@@ -1,0 +1,41 @@
+SLIDE 02 / 12  -  LoRA inside one layer: the A and B matrices
+Image: 02_lora_A_B_matrices.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+What happens inside ONE layer (example: BERT's 768 x 768 "query" layer,
+r = 8, alpha = 16). The input x goes down two paths:
+  - Top path (frozen):  x -> W -> W.x          (the original weight, locked)
+  - Bottom path (LoRA): x -> A -> 8 numbers -> B -> x (alpha / r)
+Both results are added together to give the output.
+
+THE FORMULA
+  output = W.x + (alpha / r) . B.A.x
+           frozen   new, trainable adapter part
+
+HOW TO EXPLAIN IT
+- W is the original pretrained weight: 768 x 768 = 589,824 numbers. Frozen.
+- A (8 x 768) COMPRESSES the 768-wide input down to just r = 8 numbers.
+- B (768 x 8) EXPANDS those 8 numbers back up to 768.
+- The 8-number middle is the "bottleneck". Its size is r.
+- The LoRA result is scaled by alpha / r (16 / 8 = 2), then added to W.x.
+
+HOW THEY START
+- A starts with small random values.
+- B starts as all ZEROS. So at step 0, B.A = 0 and the model behaves exactly
+  like the original pretrained model. Training slowly makes B.A useful.
+
+WHO CREATES A AND B?
+You never write them yourself. get_peft_model() creates an A and B for every
+layer listed in target_modules. In code they appear as lora_A and lora_B:
+
+  for name, p in model.named_parameters():
+      if "lora" in name:
+          print(name, tuple(p.shape))
+
+THE NUMBERS
+A = 6,144 + B = 6,144 = 12,288 trainable numbers, instead of 589,824.
+That is about 2% of this one layer.
+
+CLASSROOM ANALOGY
+A summarises a long letter into 8 key points; B writes a full reply back from
+those 8 points. The 8 points are what keeps LoRA small.

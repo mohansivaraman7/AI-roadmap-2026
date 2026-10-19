@@ -1,0 +1,8 @@
+Data Type	Architecture:
+
+Structured Data--------->	ANN
+Images	---------------->   CNN
+Text    ----------------->	RNN / LSTM / Transformer
+Time Series ------------->	RNN / LSTM / Transformer
+Audio       ------------->	CNN / Transformer
+LLM	     ---------------->Transformer

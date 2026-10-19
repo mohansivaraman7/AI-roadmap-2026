@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/hp/Desktop/Uptor_AI_ML/ML_OPS/uptor_002_ai_ml_api-complete/mlruns/197083266459183814/c7141f08d438462584a6de390a67a9f2/artifacts
+end_time: 1789800233258
+entry_point_name: ''
+experiment_id: '197083266459183814'
+lifecycle_stage: active
+run_id: c7141f08d438462584a6de390a67a9f2
+run_name: predict-20260919T064353254623Z
+run_uuid: c7141f08d438462584a6de390a67a9f2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1789800233255
+status: 3
+tags: []
+user_id: hp

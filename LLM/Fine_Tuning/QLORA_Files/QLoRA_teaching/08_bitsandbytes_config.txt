@@ -1,0 +1,53 @@
+SLIDE 08 / 12  -  BitsAndBytesConfig: the 4 settings to know
+Image: 08_bitsandbytes_config.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The BitsAndBytesConfig code, a table of the four settings you actually need
+for QLoRA, and a few optional settings.
+
+THE CODE
+  bnb_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_quant_type="nf4",
+      bnb_4bit_compute_dtype=torch.bfloat16,   # torch.float16 on a T4
+      bnb_4bit_use_double_quant=True,
+  )
+  model = AutoModel...from_pretrained(name, quantization_config=bnb_config,
+                                      device_map="auto")
+
+THE FOUR SETTINGS
+1. load_in_4bit=True  (default False)
+   Store the frozen weights in 4-bit. The alternative load_in_8bit=True
+   stores them in 8-bit (more memory, slightly better precision).
+   Use one or the other, never both.
+2. bnb_4bit_quant_type="nf4"  (default "fp4")
+   The 4-bit format. NF4 is the QLoRA standard and best for model weights.
+   The default is fp4, so always set "nf4" explicitly.
+3. bnb_4bit_compute_dtype  (default float32)
+   Weights are STORED in 4-bit but converted to this type for the math.
+   bfloat16 on newer GPUs (A100, L4, RTX 30/40). float16 on the free Colab T4,
+   which does not support bfloat16 natively. float32 works but is slower.
+   T4-safe code:
+     compute = (torch.bfloat16
+                if torch.cuda.get_device_capability()[0] >= 8
+                else torch.float16)
+4. bnb_4bit_use_double_quant=True  (default False)
+   Also compress the per-block scale factors (~0.4 bits per weight saved,
+   almost no accuracy loss).
+
+OPTIONAL SETTINGS (GOOD TO KNOW)
+  llm_int8_skip_modules        keep some layers un-quantized, e.g. a new
+                               classifier head ["score"] (used in our notebook)
+  bnb_4bit_quant_storage       packing type, advanced multi-GPU (FSDP) setups
+  llm_int8_threshold           outlier threshold, 8-bit mode only
+  llm_int8_enable_fp32_cpu_offload  put some layers on CPU if the GPU is too
+                               small
+
+REMEMBER IT AS
+STORE in 4-bit, using NF4, COMPUTE in 16-bit, DOUBLE-COMPRESS the scales.
+
+NEXT STEP IN CODE
+Add prepare_model_for_kbit_training(model) before get_peft_model(...).
+It keeps sensitive layers (like layer norms) in higher precision and turns on
+gradient checkpointing, which makes 4-bit training more stable. The rest of
+the LoRA code is unchanged.

@@ -1,0 +1,16 @@
+1. Company_Details
+   1.1 Leave Policy
+   1.2 Technology Details
+   1.3 Clients working
+   1.4 Branches, WorkPlaces and Country
+
+2. one Program
+  2.1 Contain all this details with different functions
+  decorated by @tool
+  @tool(leavePolicy)
+  @tool(CompanyLocation)
+  @tool(Clients)
+  @tool(Technology)
+  tools = [leavePolicy,CompanyLocation,Clients,Technology]
+  system_prompt = """""""
+  create_agent(llm, tools, system_prompt)

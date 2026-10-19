@@ -1,0 +1,7 @@
+| Layer              | Purpose                                                               | Output                 |
+| ------------------ | --------------------------------------------------------------------- | ---------------------- |
+| **Conv2D**         | Learns useful patterns like edges, textures, shapes, and object parts | Feature maps           |
+| **ReLU**           | Removes negative values and introduces non-linearity                  | Activated feature maps |
+| **MaxPooling**     | Keeps the strongest features and reduces spatial size                 | Smaller feature maps   |
+| **Flatten**        | Converts 2D feature maps into a 1D vector                             | Feature vector         |
+| **Dense (Linear)** | Uses the extracted features to make the final prediction              | Class scores           |

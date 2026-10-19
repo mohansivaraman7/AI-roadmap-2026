@@ -1,0 +1,28 @@
+# Central configuration for the sentiment classification project.
+# Keeping config out of code means retraining with new hyperparameters
+# never requires touching src/*.py.
+
+data:
+  raw_path: ../data/raw/sample_reviews.csv
+  processed_dir: data/processed
+  test_size: 0.2
+  val_size: 0.1
+  random_seed: 42
+
+model:
+  base_model: distilbert-base-uncased   # small open-source transformer LLM
+  num_labels: 2
+  max_length: 64
+
+training:
+  epochs: 3
+  batch_size: 8
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  output_dir: models/sentiment-classifier
+
+mlflow:
+  tracking_uri: mlruns          # local file store; point at a server URI in real deployments
+  experiment_name: sentiment-classification
+  registered_model_name: sentiment-classifier
+  production_alias: champion    # MLflow model alias used to mark the "live" model

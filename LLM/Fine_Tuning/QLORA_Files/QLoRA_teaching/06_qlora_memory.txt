@@ -1,0 +1,46 @@
+SLIDE 06 / 12  -  QLoRA = LoRA + a 4-bit frozen model
+Image: 06_qlora_memory.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+What QLoRA stores and how, a memory comparison for a 7B model, which model
+sizes fit on a 16 GB GPU, and when to use LoRA vs QLoRA.
+
+THE CORE IDEA
+QLoRA uses the SAME A and B adapters as LoRA. The only difference is that the
+frozen base model is stored in 4-bit instead of 16-bit.
+  LoRA  : frozen model (16-bit) + A, B (trainable)
+  QLoRA : frozen model (4-bit)  + A, B (trainable, kept in 16-bit)
+During each calculation the 4-bit weights are temporarily turned back into
+16-bit, used, then discarded.
+
+WHY IT WORKS
+The base model is frozen anyway, so storing it roughly costs very little
+accuracy. The adapters, which actually learn, stay in full precision.
+
+MEMORY FOR THE WEIGHTS OF A 7B MODEL
+  32-bit (float32)     4 bytes per weight    ~28 GB
+  16-bit (fp16/bf16)   2 bytes per weight    ~14 GB
+  4-bit  (NF4, QLoRA)  0.5 bytes per weight  ~3.5 GB
+The red dashed line on the slide is a free Colab T4 GPU (16 GB). Note that
+training also needs extra memory for activations, so ~14 GB of weights does
+not fit in practice on a 16 GB GPU.
+
+DOES IT FIT ON A 16 GB GPU?
+  0.5B - 1B   LoRA: yes, easily     QLoRA: yes (not needed)
+  3B          LoRA: yes, tight      QLoRA: yes, comfortable
+  7B - 8B     LoRA: usually not     QLoRA: fits
+  13B+        LoRA: no              QLoRA: needs a 24 GB+ GPU
+
+WHEN TO USE WHICH
+- QLoRA: the model is too big for your GPU with normal LoRA.
+- LoRA: the model fits. It trains a bit faster (no 4-bit <-> 16-bit
+  conversion on every step).
+- QLoRA is not useful for BERT: BERT (110M) is already tiny.
+
+REQUIREMENTS
+An NVIDIA GPU and the bitsandbytes library.
+In Colab: Runtime -> Change runtime type -> GPU.
+
+ONE-LINE SUMMARY
+QLoRA is not a new adapter method. It is LoRA plus a memory trick for the
+frozen part.

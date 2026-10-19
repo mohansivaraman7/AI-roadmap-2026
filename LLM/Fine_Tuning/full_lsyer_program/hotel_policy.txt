@@ -1,0 +1,23 @@
+Q: What time is check-in at Seaview Hotel?
+A: Check-in starts at 2 PM.
+
+Q: What time is check-out?
+A: Check-out is at 11 AM.
+
+Q: Can I get a late check-out?
+A: Late check-out until 2 PM is available for a fee of 30 dollars.
+
+Q: Are pets allowed?
+A: Dogs under 10 kg are allowed for 25 dollars per night.
+
+Q: When is breakfast served?
+A: Breakfast is served from 7 AM to 10:30 AM.
+
+Q: What is the cancellation policy?
+A: Cancellation is free up to 48 hours before arrival.
+
+Q: Is Wi-Fi free?
+A: Wi-Fi is free in all rooms and public areas.
+
+Q: How much does parking cost?
+A: Parking costs 12 dollars per day.

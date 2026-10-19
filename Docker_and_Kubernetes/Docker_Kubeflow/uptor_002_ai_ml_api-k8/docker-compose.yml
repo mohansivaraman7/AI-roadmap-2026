@@ -1,0 +1,43 @@
+services:
+  # MLflow tracking server: stores training run history, metrics, and
+  # logged models, plus every live prediction the API logs for monitoring.
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "5001:5000"   # UI/API at http://localhost:5001
+    volumes:
+      - mlflow_data:/mlflow
+    restart: unless-stopped
+
+  # One-off training job: `docker compose run --rm train` retrains the
+  # model, logs the run to MLflow, and writes house_model.pkl back to the
+  # host via the bind mount below so the api service picks up the result.
+  train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "train_model.py"]
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./house_model.pkl:/app/house_model.pkl
+    depends_on:
+      - mlflow
+
+  # The Flask API itself, logging every /predict call back to MLflow.
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+
+volumes:
+  mlflow_data:

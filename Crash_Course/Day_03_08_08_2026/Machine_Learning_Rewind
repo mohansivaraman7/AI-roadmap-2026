@@ -1,0 +1,149 @@
+1. Machine Learning(SD)
+   Process of prediction , or understanding the insight or pattern of data
+   for the Structured Data
+   1.1 CSV 1.2 EXCEL 1.3 JSON
+   1.2 Library:
+       scikit-learn(sklearn) - Important for Models
+       pandas(File Reading, File Manipulation, ETL)
+       matplotlib or seaborn (EDA - Visualization)
+       scipy or statsmodels (Stats and Maths and TimeSeries (ARIMA))
+       Numpy (For mathematical Calculation)
+       Advanced:
+       skopt (scikit-optimize) - Optimization
+   1.3 Process of Betterment in Model:
+       1.3.1 Train and Test (80:20 or 70:30)
+             ---> It avoids OverFitting and UnderFitting
+       1.3.2 Estimate the Model by its metrics
+             1.3.2.1 Regression
+                     r2_score, mean_squared_error, absolute_mean_error
+             1.3.2.2 Classification
+                     accuracy_score, precision, recall, confusion_matrix, classification_report
+       1.3.3 Cross Validate the input - cross-validation
+             1.3.3.1 KFold (CV = 5) - Ensure training and testing done on all layer of datas
+             1.3.3.2 StratifiedKFold(CV = 5) -  Ensure to train and test with exact category count
+                     100 Rows ---> 70%True 30%False
+                     Fold 1  - 70train(True,False) - 30test
+                     Fold 2
+                     Fold 3
+                     Fold 4
+                     Fold 5
+       1.3.4 HyperparameterTuning - fit and predict using certain parameter is called
+
+              model = RandomForestClassifier() #model without parameter (Default)
+              model.fit(x_train, y_train)
+              prediction = model.predict(x_test)
+
+              model = RandomForestClassifier(criterion="entropy") #model with specific parameter
+              model.fit(x_train, y_train)
+              prediction = model.predict(x_test)
+
+              grid_parameter = {"criterion":["gini","entropy"],
+                            "max_depth":[0,2,4,6,8],
+                            "min_samples_split:[None, 2, 5]}
+              model = RandomForestClassifier()
+              grid_search = GridSearchCV(model, grid_search=grid_parameter,x, y, cv=5, metric="accuracy")
+              grid_search.fit(x, y)
+              best_estimator = grid_search.best_estimators_
+              prediction = best_estimator.predict(x_test)
+
+   1.4 Model Choosing Criteria:
+          1.4.1 Output (target - dependent data - y data)
+               1.4.1.1 Regression
+                      When output stays in Continuous value
+               1.4.1.2 Classification
+                      When output stays in Categorical Data
+                      Types of Classification:
+                      a. Binary (True or False, 1 or 0 , yes or no)
+                      b. MultiClassifier (Load iris - setosa, virginca, versicolor)
+
+          1.4.2 Input  (Feature - independent data - x data)
+                Types:
+                        a Numbers(int, float)
+                        b Categories(str - object)
+                1.4.2.1 Linear vs Non-Linear
+                      Linear --> when one column is having linear over the other data
+                      Non-Linear --> When one column doest have relationship over the other data
+                1.4.2.2 parametric vs Non-Parametric
+                      Parametric --> Relationship over the columns
+                      Non-Parametric --> Relationship over rows and columns
+                1.4.2.3 Distribution Based
+                       Normally Distributed
+                       Uniformally Distributed
+   1.5 Models
+     1.5.1 Supervised - Knowing what is our target or label
+        1. LinearRegression
+        2. LogisticRegression
+        3. DecisionTree(DecisionTreeRegressor and DecisionTreeClassifier)
+            model = DecisionTreeClassifier()
+        4. RandomForest(RandomForestRegressor and RandomForestClassifier)
+            model = RandomForestClassifier()
+
+        5. SVM (SVR and SVC)
+        6. KNN (KNNClassifier and KNNRegressor)
+     1.5.2 UnSupervised - Without Knowing what is targer or label and do only with input
+        1. Clustering (Grouping)
+           1.1 KMeans
+           1.2 Hierarchical Clustering
+              1.2.1 Agglomerative  (Bottom up)
+              1.2.2 Divisive (top down)
+           1.3 DBScan
+        2. Dimensionality Reduction
+            2.1 PCA (Principle Component Analysis)
+        3. Visualization
+           t-SNE - T distributed Stochastic Neighbour Embedding.
+
+     1.6 Advanced Model Separation:
+         All Trees based models comes under Ensemble Technique
+         Ensemble Technique: Grouping more than one tree
+          1.6.1 Bagging - Parallel Processing
+             a. RandomForest
+                  model = RandomForest(n_estimators=10)
+          1.6.2 Boosting - Series or Sequential Processing
+              a. LightGBM
+              b. adaboosting
+              c. xgboosting
+              d. catboosting
+              e. gradient boosting
+          1.6.3 Stacking
+              One program will have multiple model and final model
+              Logistics, DecisionTree
+              final: RandomForest
+
+      1.7 Curse of Dimensionality:
+          Input or Columns or Feature
+          1.7.1 Feature Extraction - PreProcessing
+              a. PCA (Principle Component Analysis - UnSupervised)
+              b. LDA (Linear Discriminant Analysis - Supervised)
+              c. ICA (Important Component Analysis - Supervised)
+          1.7.2 Feature Selection - Preprocessing
+              ANOVA
+              a. SelectKBest
+              b. chi2
+
+     1.8 Feature Scaling:
+          Converting number from one form into another form is called
+          feature Scaling.
+          from sklearn.preprocessing import StandardScaler
+          from sklearn.preprocessing import MinMaxScaler
+          Ensure to do Scaling when model belongs to "Distance Based"
+          1. KNN
+          2. KMeans - model = KMeans(n_clusters=3)
+          3. Hierarchical
+              3.1 Agglomerate -  model = Agglomerative(n_cluster=)
+              3.2 Divisive - model = (n_cluster=)
+          4. DBScan - EPS (Radius)
+          5. PCA
+          6. t-SNE
+
+          List some of Distance Based Algorithm:
+          1. Euclidean 2. Manhattan
+
+2. Deep Learning (SD + UD)
+   Process of prediction , or understanding the insight or pattern of data
+   for structure data and also unstructured data.
+   Major: UnStructured
+   2.1 Images 2.2 Videos 2.3 Audios
+   2.2 Library
+       Basics: sklearn(MLPClassifier, MLPRegressor)
+       Mid   : tensorflow(Google)
+       Latest: pytorch(torch - Class based neural network)

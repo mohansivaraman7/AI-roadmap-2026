@@ -1,0 +1,75 @@
+1. Tokens and embeddings
+
+Tokens are not words. Models see sub-word pieces: “unbelievable” might become un + believ + able.
+
+This is why LLMs are bad at counting letters (“how many r’s in strawberry?”).
+They never see individual letters.
+
+Numbers split strangely (“12345” might become 123 + 45), which is one reason arithmetic is unreliable.
+
+Hindi, Tamil and other non-English text often needs more tokens for the same meaning,
+so it costs more and fills the context window faster.
+
+The input embedding is the same in every context. “Bank” gets the same starting vector
+in “river bank” and “bank loan”. Attention layers are what make it context-specific.
+After a few layers, the two “banks” have very different vectors.
+This is the key difference from older word embeddings (word2vec), where each word has one fixed vector.
+
+The tokenizer must match the model. Feeding BERT’s token IDs into GPT-2 gives nonsense. In Hugging Face, always load both with the same model name.
+
+2. Positional encoding
+
+Attention has no sense of order by itself.
+Without position information, “dog bites man” and “man bites dog” produce the
+same set of attention scores. Word order exists only because position information is added.
+
+Methods vary by model:
+sine/cosine (original paper),
+learned positions (BERT, GPT-2), and
+RoPE (most modern LLMs like Llama), which rotates Q and K by position.
+Context-window extensions (e.g., 4K → 128K tokens) often work by adjusting this position scheme.
+
+3. Attention
+
+Attention is soft, not a choice. Every token gives some weight to every token it can see.
+“It” might give 60% to “cat” and small amounts to everything else.
+It is a weighted average, not a pointer.
+
+Attention weights must add up to 100%, so attention has to go somewhere. When nothing is relevant, models often dump attention on the first token or on punctuation. These are called attention sinks. So a bright spot in an attention map does not always mean “important”.
+
+Attention maps are not full explanations.
+They show where information moved in one layer and one head.
+The final answer comes from dozens of layers, many heads, and the feed-forward layers too.
+Use attention maps as hints, not proof.
+
+Q, K and V are three learned views of the same token, not the token itself.
+The dot product measures similarity in a space the model learned.
+So “similar” means “useful to connect for predicting text”, not necessarily “similar in meaning”.
+
+Dividing by √d is necessary. Without it, large vectors produce huge scores, softmax becomes nearly 100% on one token, and gradients vanish
+
+4. Self, masked and cross-attention
+
+All three use the same formula. The only difference is where Q, K and V come from, and whether a mask is applied:
+
+Type	                              Q from	      K, V from	         Mask
+=================================================================================================
+Self-attention (encoder, BERT)	    same sequence	same sequence	none: sees left and right
+Masked self-attention (GPT, Claude)	same sequence	same sequence	causal: sees only the past
+Cross-attention (translation, T5)	decoder	        encoder output	none
+
+Note:
+
+Modern LLMs have no cross-attention.
+GPT, Claude and Llama are decoder-only.
+Your prompt and the model’s answer are one continuous sequence, and the model reads both with masked self-attention.
+
+The causal mask also applies to your prompt.
+In a decoder-only model, word 5 of your prompt cannot see word 6.
+This is one reason ordering in a prompt matters: instructions placed before the content they refer to are easier for every later token to use.
+
+BERT sees both directions,
+so it doesn’t generate naturally.
+It is great for understanding (classification, search embeddings),
+but it was not trained to write left to right.
+That is why RAG uses BERT-style models for search and GPT-style models for answers.

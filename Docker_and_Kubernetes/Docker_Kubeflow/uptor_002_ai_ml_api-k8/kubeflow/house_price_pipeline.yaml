@@ -1,0 +1,173 @@
+# PIPELINE DEFINITION
+# Name: house-price-training-pipeline
+# Description: Trains the house-price LinearRegression model, logs the run to MLflow, and gates on a minimum r2 -- the Kubeflow equivalent of running train_model.py by hand.
+# Inputs:
+#    min_r2: float [Default: 0.9]
+#    mlflow_tracking_uri: str [Default: 'http://mlflow-service.default.svc.cluster.local:5000']
+components:
+  comp-check-quality-gate:
+    executorLabel: exec-check-quality-gate
+    inputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+      parameters:
+        min_r2:
+          parameterType: NUMBER_DOUBLE
+  comp-train-house-price-model:
+    executorLabel: exec-train-house-price-model
+    inputDefinitions:
+      parameters:
+        mlflow_tracking_uri:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-check-quality-gate:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - check_quality_gate
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.17.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef check_quality_gate(metrics: Input[Metrics], min_r2: float):\n\
+          \    \"\"\"Fails the run if r2 is below the threshold -- the pipeline's\
+          \ smoke test.\"\"\"\n    r2 = metrics.metadata[\"r2\"]\n    print(f\"r2={r2:.4f},\
+          \ required >= {min_r2}\")\n    if r2 < min_r2:\n        raise ValueError(\n\
+          \            f\"Quality gate failed: r2 {r2:.4f} is below the required {min_r2}\"\
+          \n        )\n    print(\"Quality gate passed.\")\n\n"
+        image: python:3.11-slim
+    exec-train-house-price-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_house_price_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas==2.2.2'\
+          \ 'scikit-learn==1.5.1' 'joblib==1.4.2' 'mlflow-skinny==2.16.0'  &&  python3\
+          \ -m pip install --quiet --no-warn-script-location 'kfp==2.17.0' '--no-deps'\
+          \ 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\
+          \n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_house_price_model(\n    mlflow_tracking_uri: str,\n   \
+          \ model: Output[Model],\n    metrics: Output[Metrics],\n):\n    \"\"\"Trains\
+          \ the model and logs the run, mirroring train_model.py exactly.\"\"\"\n\
+          \    import joblib\n    import pandas as pd\n    from sklearn.linear_model\
+          \ import LinearRegression\n    from sklearn.metrics import mean_squared_error,\
+          \ r2_score\n\n    # Same five rows train_model.py uses.\n    df = pd.DataFrame({\n\
+          \        \"size\": [1000, 1200, 1500, 1800, 2000],\n        \"price\": [50,\
+          \ 60, 75, 90, 100],\n    })\n    x = df[[\"size\"]]\n    y = df[\"price\"\
+          ]\n\n    reg = LinearRegression()\n    reg.fit(x, y)\n\n    preds = reg.predict(x)\n\
+          \    mse = mean_squared_error(y, preds)\n    r2 = r2_score(y, preds)\n\n\
+          \    # model.path is a location Kubeflow manages for this run -- writing\
+          \ here\n    # (rather than a plain \"house_model.pkl\") is what lets the\
+          \ next pipeline\n    # step, and the Kubeflow UI's lineage graph, find this\
+          \ exact artifact.\n    joblib.dump(reg, model.path)\n\n    metrics.log_metric(\"\
+          mse\", mse)\n    metrics.log_metric(\"r2\", r2)\n\n    # Log to the same\
+          \ MLflow server the Docker Compose / Kubernetes api and\n    # train services\
+          \ use -- never let this block the pipeline if MLflow is\n    # unreachable,\
+          \ same policy as train_model.py and app.py.\n    try:\n        import mlflow\n\
+          \n        if mlflow_tracking_uri:\n            mlflow.set_tracking_uri(mlflow_tracking_uri)\n\
+          \        mlflow.set_experiment(\"house-price-training\")\n        with mlflow.start_run(run_name=\"\
+          kubeflow-pipeline\"):\n            mlflow.log_param(\"model_type\", \"LinearRegression\"\
+          )\n            mlflow.log_param(\"training_rows\", len(df))\n          \
+          \  mlflow.log_metric(\"mse\", mse)\n            mlflow.log_metric(\"r2\"\
+          , r2)\n        print(\"Logged to MLflow.\")\n    except Exception as exc:\n\
+          \        print(f\"MLflow logging skipped: {exc}\")\n\n    print(f\"Trained\
+          \ model: r2={r2:.3f}, mse={mse:.3f}\")\n\n"
+        image: python:3.11-slim
+pipelineInfo:
+  description: Trains the house-price LinearRegression model, logs the run to MLflow,
+    and gates on a minimum r2 -- the Kubeflow equivalent of running train_model.py
+    by hand.
+  name: house-price-training-pipeline
+root:
+  dag:
+    tasks:
+      check-quality-gate:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-check-quality-gate
+        dependentTasks:
+        - train-house-price-model
+        inputs:
+          artifacts:
+            metrics:
+              taskOutputArtifact:
+                outputArtifactKey: metrics
+                producerTask: train-house-price-model
+          parameters:
+            min_r2:
+              componentInputParameter: min_r2
+        taskInfo:
+          name: Quality gate
+      train-house-price-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-house-price-model
+        inputs:
+          parameters:
+            mlflow_tracking_uri:
+              componentInputParameter: mlflow_tracking_uri
+        taskInfo:
+          name: Train model
+  inputDefinitions:
+    parameters:
+      min_r2:
+        defaultValue: 0.9
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      mlflow_tracking_uri:
+        defaultValue: http://mlflow-service.default.svc.cluster.local:5000
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.17.0

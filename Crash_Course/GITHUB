@@ -1,0 +1,30 @@
+https://github.com/mohansivaraman7/crashcourse.git
+Prompt Engineering:
+1. Zero-Shot Prompting:
+  can you convert "How are you" into tamil.
+2. Few-Shot Prompting:
+   can you read this image and convert the same into 90's template
+3. Role based prompting:
+   Consider yourself a interview for tester. I learned few AI concept.
+   now tell me how can i expect the question .
+Framework: RACE and AIDA
+RACE -
+Role:
+Action:
+Context:
+Expectation:
+Model:
+1. Consume it - Chatgpt, gemini, grok
+2. Produce it - anthropic, openAI
+3. Consume and Reproduce - ollama, mistral + our data specific
+4. consume and fine tune - model (fine tuning)
+  4.1 gPU + google collab
+
+prompt Engineering
+Context Engineering
+Harness Engineering
+
+DB --> Vector DB (FAISS , CHROMADB, PINECOME)
+RAG --> retrieval RAG, AGENT RAG, Multimodel RAG, Agentic RAG
+MCP --> Model Context Protocol
+GENAI ---> Transformer , Diffusers

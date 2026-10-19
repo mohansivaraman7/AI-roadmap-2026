@@ -1,0 +1,48 @@
+Regularization:
+
+this is the process to ensure we avoid our model to either come
+under one of the below
+
+1. OverFitting
+2. UnderFitting
+
+Methods to Achieve : (Either overfitting or underfitting)
+
+1. Lasso (Column Selection) - KBest
+   L1 - Chooses the best column
+2. Ridge (Column Extraction) - PCA, ICA, LDA
+   L2 - Combines the column with best feature insights
+
+Both combined can help us achieving "OverFitting"
+More influence of both can also lead to "UnderFitting"
+
+Penalty:
+
+| Penalty      | Meaning                  | Effect                                              |
+| ------------ | ------------------------ | --------------------------------------------------- |
+| `None`       | No regularization        | Model focuses only on prediction error              |
+| `l1`         | Lasso Regularization     | Can make coefficients exactly 0 (feature selection) |
+| `l2`         | Ridge Regularization     | Shrinks coefficients but keeps most features        |
+| `elasticnet` | Combination of L1 and L2 | Both feature selection and shrinkage                |
+
+C :
+
+| C     | Penalty Strength         |
+| ----- | ------------------------ |
+| 1000  | Very weak penalty        |
+| 100   | Weak penalty             |
+| 10    | Mild penalty             |
+| 1     | Default                  |
+| 0.1   | Strong penalty           |
+| 0.01  | Very strong penalty      |
+| 0.001 | Extremely strong penalty |
+
+Solver:
+
+| Solver      | Meaning                             | Speed                   | Supports L1? |
+| ----------- | ----------------------------------- | ----------------------- | ------------ |
+| `lbfgs`     | Quasi-Newton method                 | Fast                    | ❌            |
+| `liblinear` | Coordinate descent                  | Good for small datasets | ✅            |
+| `saga`      | Stochastic gradient descent variant | Large datasets          | ✅            |
+| `sag`       | Stochastic average gradient         | Large datasets          | ❌            |
+| `newton-cg` | Newton method                       | Medium                  | ❌            |

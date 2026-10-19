@@ -1,0 +1,126 @@
+======================================================================
+ 04 — MULTI-HEAD ATTENTION
+ Program: 04_multi_head.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 The problem with one attention
+----------------------------------------------------------------------
+One self-attention gives each word ONE set of percentages. But words
+relate to each other in many ways at the same time:
+
+   "The chef who won the award cooked the fish."
+
+   For "cooked":
+     grammar view  -> who did it?            "chef"
+     object view   -> what was cooked?       "fish"
+     nearby view   -> what's right before me? "award"
+
+One softmax can't put 90% on "chef" AND 90% on "fish". It has to
+average them, and the information gets blurred.
+
+
+1.2 The idea: several attentions in parallel
+----------------------------------------------------------------------
+Run several self-attentions side by side. Each one is a HEAD.
+Each head has its own Wq, Wk, Wv, so it can learn its own kind of
+relationship. Then combine their results.
+
+ANALOGY: a panel of specialist reviewers reading the same essay.
+One checks grammar, one checks facts, one checks style. Each writes
+notes; an editor (the output Linear layer) merges the notes.
+
+
+1.3 The splitting trick (why it's not more expensive)
+----------------------------------------------------------------------
+We DON'T make each head full size. We cut the vector into slices:
+
+   d_model = 16, n_heads = 4  ->  each head works with 16/4 = 4 numbers (dk)
+
+   word vector:  [ a a a a | b b b b | c c c c | d d d d ]
+                   head 0    head 1    head 2    head 3
+
+Each head does softmax(QKᵀ/√dk)·V on its own slice. Then:
+   CONCAT : glue the 4 results back into one 16-number vector
+   OUTPUT : one Linear layer mixes information across heads
+
+Total compute ≈ one big attention, but now with 4 viewpoints.
+Real models: GPT-3 uses 96 heads; Llama-3 8B uses 32.
+
+
+1.4 Research note for curious learners
+----------------------------------------------------------------------
+When researchers inspect trained models, they find heads that specialise:
+"previous-token heads", heads that match brackets, heads that copy
+repeated names ("induction heads"). Nobody programs this; it emerges
+from training.
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+head          : one independent attention inside the layer
+n_heads (h)   : number of heads (4)
+d_model (D)   : full vector size (16)
+dk            : size per head = d_model / n_heads (4)
+self.qkv      : ONE Linear layer that produces Q, K and V together (speed trick)
+self.out      : the output Linear that mixes heads
+.view(...)    : reshape a tensor without changing its numbers
+.transpose(1, 2) : swap two axes
+B, T, D       : batch, tokens, dimension (see 00_basics.txt)
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+  self.qkv = nn.Linear(d_model, 3 * d_model)
+-> Instead of three separate Wq, Wk, Wv, one layer outputs 48 numbers,
+   which we split into Q (16), K (16), V (16). Same maths, faster.
+
+  q, k, v = self.qkv(x).chunk(3, dim=-1)
+-> Split into Q, K, V. Each shape (B, T, 16).
+
+  split = lambda t: t.view(B, T, self.h, self.dk).transpose(1, 2)
+-> THE KEY RESHAPE. (B, T, 16) -> (B, T, 4, 4) -> (B, 4, T, 4)
+   i.e. "for each sentence, for each HEAD, T words of 4 numbers".
+   Putting heads in their own axis lets PyTorch run all heads at once.
+
+  scores = q @ k.transpose(-2, -1) / math.sqrt(self.dk)
+-> Same formula as step 3, but now computed for all 4 heads in parallel.
+   Shape (B, 4, T, T): one T x T table per head. Note: scale by √dk (per head).
+
+  mask / softmax
+-> Same causal mask as step 3.
+
+  y = y.transpose(1, 2).reshape(B, T, D)
+-> Undo the split: put the 4 heads' outputs side by side again (CONCAT).
+
+  return self.out(y)
+-> Mix heads with one Linear layer.
+
+If the reshape lines feel hard: they are just bookkeeping to run 4
+attentions at once. The CONCEPT is: split -> attend separately -> glue -> mix.
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+   input  shape: (1, 5, 16)
+   output shape: (1, 5, 16)   <- same shape, so layers can be stacked
+   weights shape: (1, 4, 5, 5) <- one 5x5 table per head
+
+   head 0: last word attends to w0:0.22 w1:0.17 w2:0.20 w3:0.22 w4:0.19
+   head 1: last word attends to ... w3:0.39 ...
+   ...
+Each head shows a DIFFERENT pattern for the same word. The weights are
+fairly flat because the model is untrained; training makes them sharp.
+
+
+PART 5: DISCUSSION QUESTIONS
+======================================================================
+1. Change n_heads to 2 or 8. What changes in the weights' shape? (d_model must divide evenly.)
+2. Why divide by √dk and not √d_model?
+3. Why do we need self.out at the end? (Without it heads never share info.)
+4. Name three relationships you'd hope different heads learn in English.
+
+ONE-LINE SUMMARY: Multi-head attention runs several smaller attentions
+in parallel so the model can track many kinds of relationships at once.

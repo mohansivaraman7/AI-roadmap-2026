@@ -1,0 +1,16 @@
+1. We need to have db that contains some leaves
+   1.1 so we create a dynamic db (sqlite3) with some leave hardcode
+   inserted
+   1.1 So run "create_holiday_db".py file first
+
+2. Once done with file reading, run teh next file called
+   "holiday_api.py" to create API
+   2.1 you may have to install the following to run teh API
+       2.1.1 pip install fastapi
+       2.1.2 pip install uvicorn
+
+Note:
+1. Here for API we were using FastAPI not Flask
+2. So we running this program using uvicorn
+3. ensure that you have company_policy.pdf in the same eventhough
+it is not used initially.

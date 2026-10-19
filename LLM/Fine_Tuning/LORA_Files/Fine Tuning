@@ -1,0 +1,19 @@
+Fine Tuning:
+
+1. Take a model basically "Open Model" and with already trained
+parameter we will adding another minimal extra data into it.
+  1.1 Open Model
+  1.2 Closed Model
+
+2. Its like adjusting the knowledge base of the actual model with our data
+
+3. Type of Fine - Tuning
+  3.1 Full Fine-Tuning
+  3.2 Partial Fine-Tuning
+       3.2.1. Layer Freezing - BERT(Bidirectional Encoder Representation Transformers)
+       3.2.2. Parameter Efficient Fine Tuning
+              a. LORA (Low Rank Adaptation)
+              b. QLORA (Quantized Low Rank Adaptation)
+              c. Adapters
+              d. Prompt Tuning
+

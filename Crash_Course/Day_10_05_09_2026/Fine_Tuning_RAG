@@ -1,0 +1,18 @@
+1. RAG - Ensuring LLM retrieve the details of the specific data
+and respond by generate
+ 1.1 Model remains untouched
+
+2. Fine Tuning
+  2.1 Models (LLM) it built on million and millions of data
+  2.2 So We going to download or consume the model in anyway
+  2.3 then we will be doing Fine-Tuning
+  2.4 Fine Tuning
+     2.5 Fine Tuning Completely
+     2.6 Partial Fine Tuning
+        2.6 We have own database then we will convert that into numbers
+        2.7 we will freeze the existing model and then add ours as well.
+        2.8 this concept is called PEFT
+            2.8.1 LORA (Low Ranked Adaption)
+            2.8.2 QLORA (Qunatzied Low Ranked Adaption)
+  2.9 Fine Tuning requires huge system with GPU capacity.
+  2.10 We going to use Google Collab

@@ -1,0 +1,50 @@
+SLIDE 10 / 12  -  Optimizers: AdamW and its alternatives
+Image: 10_optimizers.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A comparison table of optimizers (memory, idea, when to use), why AdamW uses
+memory, example code and a quick decision guide.
+
+WHAT AN OPTIMIZER DOES
+After loss.backward() computes the gradients, optimizer.step() decides HOW to
+update each trainable weight. AdamW is the default for fine-tuning; most
+alternatives exist to save memory.
+
+THE OPTIONS
+  AdamW             adaptive step per weight + weight decay. DEFAULT.
+  Adam              like AdamW but handles weight decay less cleanly. Older code.
+  SGD + momentum    plain gradient steps, low memory. Common for vision models,
+                    tricky to tune for transformers.
+  AdamW 8-bit (bnb) AdamW with its state in 8-bit. Same results, less memory.
+  Paged AdamW 8-bit (bnb)  8-bit + spills to CPU RAM on memory spikes.
+                    The QLoRA standard.
+  Adafactor         stores compressed statistics. Very low memory (used for T5).
+  Lion              uses only the sign of the update. Saves memory; needs a
+                    learning rate about 3-10x LOWER than AdamW.
+  LAMB              AdamW adjusted per layer. Huge-batch pre-training.
+The memory dots on the slide are relative: 4 dots = AdamW's 2 extra values
+per trainable weight.
+
+WHY AdamW USES MEMORY
+For every trainable weight it keeps two extra numbers: the running average of
+the gradient (momentum) and of the squared gradient (variance). With LoRA
+that is small (few trainable weights). With full fine-tuning it can be larger
+than the model itself - that is when the alternatives matter.
+
+CODE
+  optimizer = torch.optim.AdamW(params, lr=2e-4)
+  optimizer = bnb.optim.AdamW8bit(params, lr=2e-4)
+  optimizer = bnb.optim.PagedAdamW8bit(params, lr=2e-4)
+  # with the Hugging Face Trainer, change one setting:
+  TrainingArguments(optim="paged_adamw_8bit")   # or "adamw_torch",
+                                                # "adamw_bnb_8bit", "adafactor"
+
+QUICK DECISION
+  Fits in memory          -> AdamW
+  QLoRA / tight GPU       -> paged_adamw_8bit
+  Extremely tight memory  -> Adafactor
+  Experimenting           -> Lion (remember: lower learning rate)
+
+NOTE
+Newer optimizers (e.g. Muon, Sophia) appear regularly in research, but none
+has replaced AdamW as the standard for fine-tuning.

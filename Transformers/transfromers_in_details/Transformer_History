@@ -1,0 +1,43 @@
+1. RNN
+   1.1. Re-Current Neural Network
+
+Note: Sequence/TimeSeries
+   Input ----> Hidden Layer ----> Output
+
+
+2. LSTM
+  2.1 Long Short Term Memory
+
+  Input ---> Cell State ---> Hidden Layer ---> Output
+
+3. Transformers
+  3.1 Advanced version of LSTM
+
+  Input ---> (Various Layer) ---> Output
+
+
+Technical Detailing:
+### Deep Learning Architectures for Sequential Data
+
+**1. RNN — Recurrent Neural Network**
+
+* Designed to process sequential data.
+* Maintains a hidden state that carries information across time steps.
+* Flow: Input + Previous Hidden State → Recurrent Cell → New Hidden State / Output.
+
+**2. LSTM — Long Short-Term Memory**
+
+* A special type of RNN.
+* Uses a cell state and gates to control how information is retained, updated, and forgotten.
+* Flow: Input + Previous Hidden State + Previous Cell State → LSTM Cell → New Hidden State + New Cell State.
+
+**3. Transformer**
+
+* An attention-based architecture for processing sequences and other data.
+* Uses self-attention to model relationships between tokens.
+* Uses positional information to represent token order.
+* Flow: Input → Tokenization and Embeddings → Transformer Blocks → Output.
+
+**Important:** A Transformer is not simply an advanced LSTM. It uses a different architecture based on attention rather than recurrence. Transformers are widely used in modern LLMs.
+
+

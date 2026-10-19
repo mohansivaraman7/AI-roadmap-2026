@@ -1,0 +1,8 @@
+distilgpt2
+     │
+     └── Transformer architecture
+              │
+              ├── Attention
+              ├── Feed Forward
+              ├── LayerNorm
+              └── Transformer blocks

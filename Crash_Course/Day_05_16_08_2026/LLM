@@ -1,0 +1,46 @@
+LLM = Large Language Model
+
+OpenAI,Claude,Gemini,Grox
+
+Companies(Uptor): LLM (OpenAI - Generic) --> ChatBot(distilgpt-2)
+User(Gokul)     : What is procedure to get certificate ?
+
+Response: Hallucinate (Some irrelevant Answer)
+
+User(1) ------------1.1----------- LLM(OpenAI - ditilgpt-2) (2)
+1.1  ---> RAG
+          Retrieval Augment Generation
+          Data Ingestion:
+          1.1.1 We will be Storing our company specific data in DB
+
+          Data Retrieve:
+          1.1.2 DB will be containing all the stored data and give back
+
+Note:
+a. DB(Normal) in general picks exact match
+    a.1 SQL a.2 Oracle a.3 Mongo
+b. DB(Vector DB) here we doing to use will return some "similar match record"
+   b.1 Faiss b.2 cromaDB
+
+Component:
+1. Company Specific Data
+   1.1 PDF 1.2 Text 1.3 Image 1.4 .....
+
+2. LLM for the Generation
+   2.1 OpenAI 2.2 Claude 2.3 Gemini
+   2.2 HuggingFace (Collection of Model) (pip install transformers)
+
+3. DB for Storing Company Specific Data
+   3.1 FAISS 3.2 CromaDB
+   3.2 FrameWorm that can handle this proces
+   3.3 LangChain (Framework for handling RAG activity)
+
+4. Chunking (LangChain)
+    4.1 We can feed vector DB with data as it is.
+    4.2 We need to break the data and sent it to the db
+    4.3 Process of establishing this is called document
+
+5. Embeddings (LangChain)
+    5.1 Convert the actual data into numerics(Vector)
+    5.2 VectorDB will not have raw content, rather it has numerically converted.
+    5.3 Along with LanChain we might take assist some Models to do the embeddings.

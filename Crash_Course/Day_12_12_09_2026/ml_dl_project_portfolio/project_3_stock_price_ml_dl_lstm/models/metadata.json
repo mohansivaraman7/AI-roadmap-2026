@@ -1,0 +1,27 @@
+{
+  "window_size": 10,
+  "date_range": [
+    "2015-02-17",
+    "2017-02-16"
+  ],
+  "n_trading_days": 506,
+  "test_fraction": 0.2,
+  "ml_metrics": {
+    "rmse_usd": 2.121,
+    "mae_usd": 1.593,
+    "r2_score": 0.8985,
+    "mape_percent": 1.3359
+  },
+  "dl_metrics": {
+    "rmse_usd": 2.0628,
+    "mae_usd": 1.7106,
+    "r2_score": 0.904,
+    "mape_percent": 1.4408,
+    "final_train_loss_mse_scaled": 0.002029,
+    "final_val_loss_mse_scaled": 0.002484
+  },
+  "overall_best_model": "dl_model (LSTM)",
+  "pickle_protocol": 5,
+  "training_seconds": 23.45,
+  "disclaimer": "Educational project only. Historical price prediction with these small models is NOT financial advice and should not be used for real trading decisions."
+}

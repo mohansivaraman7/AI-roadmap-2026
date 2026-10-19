@@ -1,0 +1,23 @@
+1. How well we fine tune our RAG to produce better result or generate
+better result is called "Harness"
+
+Agent ---> System we develop that communicates with LLM to produce the result
+or to act according to the user prompt
+
+Agent = Model + Harness
+
+What a harness actually contains
+
+A production-grade harness contains five layers:
+
+1. tool orchestration,
+2. verification loops,
+3. context and memory,
+4. guardrails
+5. observability.
+
+Which tools the agent is allowed to call, and when
+Checking/validating the model's proposed actions before executing them (schemas, permissions, budgets)
+Logging and monitoring what the agent actually did
+Capturing failures and feeding corrections back in so the same mistake doesn't repeat
+Managing memory/context across long or multi-day tasks

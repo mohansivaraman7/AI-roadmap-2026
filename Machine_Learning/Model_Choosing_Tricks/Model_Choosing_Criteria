@@ -1,0 +1,42 @@
+| Problem Type             | Dataset Size                     | Recommended Models                                         | Why?                                |
+| ------------------------ | -------------------------------- | ---------------------------------------------------------- | ----------------------------------- |
+| Classification           | Small (<10k rows)                | Logistic Regression, Decision Tree, Support Vector Machine | Fast, interpretable                 |
+| Classification           | Medium (10k–100k rows)           | Random Forest, XGBoost                                     | Good balance of accuracy and speed  |
+| Classification           | Large (>100k rows)               | XGBoost, LightGBM, Neural Networks(ANN)                         | Scales well                         |
+| Classification           | Images                           | Convolutional Neural Network                               | Learns image features automatically |
+| Classification           | Text                             | RNN, LSTM, Transformers (LLM)                                   | Understands language patterns       |
+| Regression               | Small                            | Linear Regression, Decision Tree Regressor                 | Simple and interpretable            |
+| Regression               | Medium                           | Random Forest Regressor, XGBoost Regressor                 | Captures non-linearity              |
+| Regression               | Large                            | XGBoost, LightGBM, Deep Learning                           | High performance                    |
+| Clustering               | Small/Medium                     | K-Means                                                    | Fast clustering                     |
+| Clustering               | Unknown cluster count            | DBSCAN                                                     | Finds clusters automatically        |
+| Clustering               | Hierarchical relationship needed | Hierarchical Clustering                                    | Dendrogram visualization            |
+| Dimensionality Reduction | Linear relationships             | Principal Component Analysis                               | Fast and effective                  |
+| Dimensionality Reduction | Class separation needed          | Linear Discriminant Analysis                               | Maximizes class separation          |
+| Forecasting              | Trend only                       | Linear Regression                                          | Simple forecasting                  |
+| Forecasting              | Time Series                      | ARIMA, SARIMA, Prophet                                     | Uses time dependency                |
+| Forecasting              | Complex patterns                 | LSTM                                                       | Learns sequential patterns          |
+
+with columns:
+
+| Problem Type             | Rows                       | Features (Dimensions) | Recommended Models                 | Why                           |
+| ------------------------ | -------------------------- | --------------------- | ---------------------------------- | ----------------------------- |
+| Classification           | Small (<10k)               | Low (<50)             | Logistic Regression, Decision Tree | Simple, interpretable         |
+| Classification           | Small (<10k)               | Medium (50-500)       | SVM, Random Forest                 | Handles more features         |
+| Classification           | Small (<10k)               | High (>500)           | SVM, L1 Logistic Regression        | Works well in high dimensions |
+| Classification           | Medium (10k-100k)          | Low/Medium            | Random Forest, XGBoost             | Strong performance            |
+| Classification           | Medium (10k-100k)          | High (>1000)          | XGBoost, LightGBM                  | Handles many features         |
+| Classification           | Large (>100k)              | Low/Medium            | XGBoost, LightGBM                  | Fast and scalable             |
+| Classification           | Large (>100k)              | High (>1000)          | Neural Networks, LightGBM          | Better scaling                |
+| Regression               | Small                      | Low                   | Linear Regression                  | Simple and interpretable      |
+| Regression               | Small                      | High                  | Lasso, Ridge                       | Controls overfitting          |
+| Regression               | Medium                     | Low/Medium            | Random Forest Regressor            | Captures non-linearity        |
+| Regression               | Medium                     | High                  | XGBoost Regressor                  | Handles complex relationships |
+| Regression               | Large                      | Any                   | XGBoost, LightGBM, ANN             | Scalable                      |
+| Clustering               | Low Dimensions (<20)       | Any rows              | K-Means                            | Distance works well           |
+| Clustering               | Medium Dimensions (20-100) | Any rows              | K-Means + PCA                      | Reduce dimensions first       |
+| Clustering               | High Dimensions (>100)     | Any rows              | PCA + DBSCAN                       | Distances become unreliable   |
+| Dimensionality Reduction | Linear Features            | Any                   | PCA                                | Preserves variance            |
+| Dimensionality Reduction | Class Labels Available     | Any                   | LDA                                | Maximizes separation          |
+| Forecasting              | Few Variables              | Any                   | ARIMA, SARIMA                      | Classical forecasting         |
+| Forecasting              | Many Variables             | Any                   | XGBoost, LSTM                      | Multivariate forecasting      |

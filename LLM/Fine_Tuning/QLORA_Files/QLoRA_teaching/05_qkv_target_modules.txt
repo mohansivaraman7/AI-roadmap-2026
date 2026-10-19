@@ -1,0 +1,47 @@
+SLIDE 05 / 12  -  Which layers get adapters? q_proj, k_proj, v_proj, o_proj
+Image: 05_qkv_target_modules.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The inside of one transformer layer, with the Linear layers LoRA can attach
+to, the library analogy for Q/K/V, the names used by different models, and the
+target_modules options.
+
+WHAT "proj" MEANS
+"proj" = projection = a Linear layer (a weight matrix) that turns each word's
+vector into a new vector. q_proj, k_proj and v_proj create the Query, Key and
+Value vectors used by attention. o_proj combines the attention result.
+
+Q, K, V IN PLAIN WORDS
+  Query (q_proj)  what this word is LOOKING FOR      -> your search question
+  Key   (k_proj)  what each word OFFERS as a label   -> book titles on a shelf
+  Value (v_proj)  the actual INFORMATION it carries  -> the content of the book
+  Output (o_proj) combines the result back
+
+EXAMPLE
+"The cat sat because IT was tired"
+- The Query of "it" asks: who am I referring to?
+- The Key of "cat" matches well, so "it" pays strong attention to "cat".
+- The Value of "cat" is the information that flows into "it".
+So Q . K decides HOW MUCH attention goes where; V decides WHAT is passed on.
+
+WHY LoRA OFTEN TARGETS ONLY q_proj AND v_proj
+The original LoRA paper found Q + V gave about the same accuracy as adapting
+more layers, at lower cost. It is a default, not a rule.
+
+  target_modules=["q_proj", "v_proj"]                      light default
+  target_modules=["q_proj","k_proj","v_proj","o_proj"]     all attention
+  target_modules="all-linear"                              every Linear layer,
+                                                           strongest, most params
+"all-linear" also includes the feed-forward layers (gate_proj, up_proj,
+down_proj in Llama/Qwen).
+
+NAMES DIFFER BY MODEL
+  BERT                 query / key / value
+  Llama, Qwen, Mistral q_proj / k_proj / v_proj
+  GPT-2                c_attn (Q, K and V combined in one layer)
+That is why our BERT LoRA config used ["query", "value"] and the Qwen/Llama
+config uses ["q_proj", "v_proj"].
+
+HOW TO FIND THE NAMES FOR ANY MODEL
+  print(model)
+Look for the Linear layers inside the attention block.

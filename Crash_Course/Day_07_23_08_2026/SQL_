@@ -1,0 +1,25 @@
+SQL- Structured Query Language - SQL
+Relational DataBase Management System
+Oracle, MySQL, MsServer - SQL
+
+Non-Relation DBMS
+MongoDB - No-SQL
+
+Server - Client
+MySQL --- WorkBench
+Mongo --- Compass/RoboMongo
+
+Accessing or Processing:
+1. DB Client
+2. CLI
+3. Programming Language (Python)
+4. Cloud (Amazon, Azure)
+5. AtlasDB(Direct Cloud of MongoDB)
+
+Object Based DB:
+ORM - Class based DB Management
+
+Dynamic dB Creation
+sqlite3 - Default Python Supported Libray
+
+Framework - Django - ORM (DB)

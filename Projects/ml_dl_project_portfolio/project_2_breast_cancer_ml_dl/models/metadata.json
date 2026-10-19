@@ -1,0 +1,60 @@
+{
+  "feature_columns": [
+    "Clump_Thickness",
+    "Uniformity_Cell_Size",
+    "Uniformity_Cell_Shape",
+    "Marginal_Adhesion",
+    "Single_Epithelial_Cell_Size",
+    "Bare_Nuclei",
+    "Bland_Chromatin",
+    "Normal_Nucleoli",
+    "Mitoses"
+  ],
+  "target_column": "Class",
+  "class_labels": {
+    "0": "benign",
+    "1": "malignant"
+  },
+  "best_ml_model_name": "random_forest",
+  "ml_results": {
+    "logistic_regression": {
+      "accuracy": 0.95,
+      "precision": 0.9362,
+      "recall": 0.9167,
+      "f1_score": 0.9263,
+      "roc_auc": 0.995,
+      "cv_f1_mean": 0.9559,
+      "cv_f1_std": 0.024
+    },
+    "random_forest": {
+      "accuracy": 0.9571,
+      "precision": 0.92,
+      "recall": 0.9583,
+      "f1_score": 0.9388,
+      "roc_auc": 0.9909,
+      "cv_f1_mean": 0.9513,
+      "cv_f1_std": 0.0119
+    },
+    "svm_rbf": {
+      "accuracy": 0.9571,
+      "precision": 0.9375,
+      "recall": 0.9375,
+      "f1_score": 0.9375,
+      "roc_auc": 0.9896,
+      "cv_f1_mean": 0.9522,
+      "cv_f1_std": 0.0287
+    }
+  },
+  "dl_results": {
+    "accuracy": 0.9643,
+    "precision": 0.9388,
+    "recall": 0.9583,
+    "f1_score": 0.9485,
+    "roc_auc": 0.9934,
+    "final_train_accuracy": 0.9853,
+    "final_val_accuracy": 0.9762
+  },
+  "overall_best_model": "dl_model",
+  "pickle_protocol": 5,
+  "training_seconds": 13.67
+}

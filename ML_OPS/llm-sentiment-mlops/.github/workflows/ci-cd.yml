@@ -1,0 +1,61 @@
+name: CI/CD
+
+# Runs on every push/PR: fast unit tests + a lint pass always run.
+# The train/evaluate/build-image jobs only run on pushes to main, so a
+# PR from a feature branch doesn't retrain the model or push an image.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run unit tests
+        run: pytest tests/ -v
+
+  retrain:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Prepare data
+        run: python src/data_prep.py
+      - name: Train model
+        run: python src/train.py
+      - name: Evaluate and conditionally promote
+        run: python src/evaluate.py
+      - name: Upload MLflow run artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns
+          path: mlruns/
+
+  build-image:
+    needs: retrain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download MLflow run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns
+          path: mlruns/
+      - name: Build Docker image
+        run: docker build -t sentiment-classifier:${{ github.sha }} .
+      # In a real setup: docker push to a registry, then deploy
+      # (e.g. `kubectl set image`, or trigger your cloud's deploy step).

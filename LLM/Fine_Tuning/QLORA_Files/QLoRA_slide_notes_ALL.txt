@@ -1,0 +1,591 @@
+FINE-TUNING WITH LoRA & QLoRA - TEACHER NOTES FOR ALL 12 SLIDES
+==============================================================================
+Each section explains one slide image: what it shows, how to explain it,
+key points, common student questions and short code examples.
+
+SLIDE 01 / 12  -  Four ways to fine-tune a model
+Image: 01_methods_compared.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+Four columns, one per method. Each column is a stack of model layers with the
+classifier head on top. Colour shows what happens to each layer:
+  - Orange      = trainable (weights change during training)
+  - Grey + lock = frozen (weights never change), stored in 16/32-bit
+  - Blue + lock = frozen, stored in 4-bit (QLoRA only)
+  - Small orange "A.B" box = a LoRA adapter: new, small, trainable matrices
+
+HOW TO EXPLAIN IT
+1. Full fine-tuning: every layer is orange. All weights are updated, so it
+   needs the most memory and you save a full copy of the model per task.
+2. Manual partial fine-tuning: we freeze most layers ourselves with
+   requires_grad = False and unfreeze only the top layers and the head.
+   The model's OWN weights in those top layers get changed.
+3. LoRA: the whole model is frozen (grey). Small A.B adapters are attached
+   beside each targeted layer, and only they (plus the head) learn.
+   The original model is never modified.
+4. QLoRA: exactly like LoRA, but the frozen model is stored in 4-bit (blue),
+   which cuts its memory by roughly 4x.
+
+KEY POINTS
+- All four methods learn from YOUR data. The difference is WHERE the learning
+  is stored: in existing weights (full, manual) or in new adapters (LoRA, QLoRA).
+- Manual and full fine-tuning save a full model. LoRA and QLoRA save only a
+  small adapter file (a few MB).
+- Trainable %: full = 100%, manual (our BERT program) ~13%, LoRA/QLoRA < 1%.
+
+COMMON STUDENT QUESTIONS
+Q: Is manual partial fine-tuning the same as LoRA, just without a library?
+A: No. Manual EDITS existing layers. LoRA ADDS new weights and leaves the
+   original untouched. The library (peft) only makes adding them convenient.
+Q: Is QLoRA a different adapter technique?
+A: No. Same A and B adapters as LoRA. Only the storage of the frozen model
+   changes (4-bit).
+
+ONE-LINE SUMMARY
+Manual edits some of the model's own weights; LoRA/QLoRA leave the model
+untouched and store the learning in small add-on adapters.
+
+
+SLIDE 02 / 12  -  LoRA inside one layer: the A and B matrices
+Image: 02_lora_A_B_matrices.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+What happens inside ONE layer (example: BERT's 768 x 768 "query" layer,
+r = 8, alpha = 16). The input x goes down two paths:
+  - Top path (frozen):  x -> W -> W.x          (the original weight, locked)
+  - Bottom path (LoRA): x -> A -> 8 numbers -> B -> x (alpha / r)
+Both results are added together to give the output.
+
+THE FORMULA
+  output = W.x + (alpha / r) . B.A.x
+           frozen   new, trainable adapter part
+
+HOW TO EXPLAIN IT
+- W is the original pretrained weight: 768 x 768 = 589,824 numbers. Frozen.
+- A (8 x 768) COMPRESSES the 768-wide input down to just r = 8 numbers.
+- B (768 x 8) EXPANDS those 8 numbers back up to 768.
+- The 8-number middle is the "bottleneck". Its size is r.
+- The LoRA result is scaled by alpha / r (16 / 8 = 2), then added to W.x.
+
+HOW THEY START
+- A starts with small random values.
+- B starts as all ZEROS. So at step 0, B.A = 0 and the model behaves exactly
+  like the original pretrained model. Training slowly makes B.A useful.
+
+WHO CREATES A AND B?
+You never write them yourself. get_peft_model() creates an A and B for every
+layer listed in target_modules. In code they appear as lora_A and lora_B:
+
+  for name, p in model.named_parameters():
+      if "lora" in name:
+          print(name, tuple(p.shape))
+
+THE NUMBERS
+A = 6,144 + B = 6,144 = 12,288 trainable numbers, instead of 589,824.
+That is about 2% of this one layer.
+
+CLASSROOM ANALOGY
+A summarises a long letter into 8 key points; B writes a full reply back from
+those 8 points. The 8 points are what keeps LoRA small.
+
+
+SLIDE 03 / 12  -  r: the rank of the LoRA matrices
+Image: 03_rank_r.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A bar chart of how many trainable numbers LoRA adds to ONE 768 x 768 layer for
+different values of r, plus guidance on choosing r.
+
+THE MOST IMPORTANT POINT
+r is a SIZE, not a percentage. r = 8 does NOT mean 8% of parameters.
+r is the shared middle dimension of A (r x 768) and B (768 x r): how many
+"directions" of change the adapter is able to learn.
+
+THE FORMULA
+  LoRA numbers per layer = r x (input size + output size)
+  For a 768 x 768 layer:   r x (768 + 768) = r x 1,536
+
+  r = 1   ->   1,536  (0.3% of the layer)
+  r = 2   ->   3,072  (0.5%)
+  r = 4   ->   6,144  (1.0%)
+  r = 8   ->  12,288  (2.1%)   <- common default
+  r = 16  ->  24,576  (4.2%)
+  r = 64  ->  98,304  (16.7%)
+
+WHOLE-MODEL EXAMPLE (BERT)
+r = 8 on query + value, in all 12 layers:
+  12,288 x 2 matrices x 12 layers = 294,912 numbers
+  294,912 / ~110 million = about 0.27% of BERT
+
+HOW TO CHOOSE r
+  1 - 4    simple task, small dataset (e.g. sentiment)
+  8        default starting point
+  16 - 32  harder task, more data
+  64+      big domain shift (medical, legal, a new language)
+
+RULES OF THUMB
+- Any whole number >= 1 works. Powers of 2 (2, 4, 8, 16...) are just habit.
+- Small dataset -> keep r small, or the adapter can overfit.
+- Try r = 4, 8, 16 and keep the smallest one that performs well.
+- The same r gives a different % on every model, because layer sizes differ.
+  Always check with: model.print_trainable_parameters()
+
+CLASS EXERCISE
+Run the LoRA/QLoRA program with r = 1, 2, 8, 32. Compare the trainable
+parameter count and the final accuracy. Usually accuracy barely changes while
+parameters grow a lot, which shows why small ranks are enough.
+
+
+SLIDE 04 / 12  -  lora_alpha: the volume knob
+Image: 04_lora_alpha.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+How lora_alpha controls the STRENGTH of the LoRA update, with examples and
+practical rules.
+
+THE FORMULA
+  output = W.x + (alpha / r) . B.A.x
+The LoRA part is multiplied by alpha / r before being added.
+Example: r = 8, alpha = 16 -> scale = 2.
+
+ANALOGY
+  r     = HOW MANY ideas the adapter can learn (capacity)
+  alpha = HOW LOUDLY those ideas are applied (strength / volume knob)
+
+EXAMPLES
+  r = 8,  alpha = 16  -> scale 2   most common (alpha = 2r)
+  r = 16, alpha = 32  -> scale 2   same strength, more capacity
+  r = 8,  alpha = 8   -> scale 1   conservative (alpha = r)
+  r = 4,  alpha = 8   -> scale 2   small adapter, same strength
+
+WHY DIVIDE BY r?
+Without dividing, a bigger r would silently make the update bigger, and you
+would need to re-tune the learning rate every time you changed r. Dividing by r
+keeps the update size steady, so r controls capacity and alpha controls
+strength, separately.
+
+HIGHER vs LOWER ALPHA
+- Higher alpha: stronger push away from the original model, faster learning,
+  but training can become unstable.
+- Lower alpha: gentler change, the model stays closer to the original.
+
+IN PRACTICE
+- Fix alpha (usually 2 x r) and tune the learning rate instead.
+- If the loss jumps around, lower alpha or the learning rate.
+- If you change r, change alpha with it (r = 4 -> alpha = 8,
+  r = 16 -> alpha = 32) to keep the same scaling.
+- Alpha has no effect at step 0, because B starts at zero.
+
+
+SLIDE 05 / 12  -  Which layers get adapters? q_proj, k_proj, v_proj, o_proj
+Image: 05_qkv_target_modules.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The inside of one transformer layer, with the Linear layers LoRA can attach
+to, the library analogy for Q/K/V, the names used by different models, and the
+target_modules options.
+
+WHAT "proj" MEANS
+"proj" = projection = a Linear layer (a weight matrix) that turns each word's
+vector into a new vector. q_proj, k_proj and v_proj create the Query, Key and
+Value vectors used by attention. o_proj combines the attention result.
+
+Q, K, V IN PLAIN WORDS
+  Query (q_proj)  what this word is LOOKING FOR      -> your search question
+  Key   (k_proj)  what each word OFFERS as a label   -> book titles on a shelf
+  Value (v_proj)  the actual INFORMATION it carries  -> the content of the book
+  Output (o_proj) combines the result back
+
+EXAMPLE
+"The cat sat because IT was tired"
+- The Query of "it" asks: who am I referring to?
+- The Key of "cat" matches well, so "it" pays strong attention to "cat".
+- The Value of "cat" is the information that flows into "it".
+So Q . K decides HOW MUCH attention goes where; V decides WHAT is passed on.
+
+WHY LoRA OFTEN TARGETS ONLY q_proj AND v_proj
+The original LoRA paper found Q + V gave about the same accuracy as adapting
+more layers, at lower cost. It is a default, not a rule.
+
+  target_modules=["q_proj", "v_proj"]                      light default
+  target_modules=["q_proj","k_proj","v_proj","o_proj"]     all attention
+  target_modules="all-linear"                              every Linear layer,
+                                                           strongest, most params
+"all-linear" also includes the feed-forward layers (gate_proj, up_proj,
+down_proj in Llama/Qwen).
+
+NAMES DIFFER BY MODEL
+  BERT                 query / key / value
+  Llama, Qwen, Mistral q_proj / k_proj / v_proj
+  GPT-2                c_attn (Q, K and V combined in one layer)
+That is why our BERT LoRA config used ["query", "value"] and the Qwen/Llama
+config uses ["q_proj", "v_proj"].
+
+HOW TO FIND THE NAMES FOR ANY MODEL
+  print(model)
+Look for the Linear layers inside the attention block.
+
+
+SLIDE 06 / 12  -  QLoRA = LoRA + a 4-bit frozen model
+Image: 06_qlora_memory.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+What QLoRA stores and how, a memory comparison for a 7B model, which model
+sizes fit on a 16 GB GPU, and when to use LoRA vs QLoRA.
+
+THE CORE IDEA
+QLoRA uses the SAME A and B adapters as LoRA. The only difference is that the
+frozen base model is stored in 4-bit instead of 16-bit.
+  LoRA  : frozen model (16-bit) + A, B (trainable)
+  QLoRA : frozen model (4-bit)  + A, B (trainable, kept in 16-bit)
+During each calculation the 4-bit weights are temporarily turned back into
+16-bit, used, then discarded.
+
+WHY IT WORKS
+The base model is frozen anyway, so storing it roughly costs very little
+accuracy. The adapters, which actually learn, stay in full precision.
+
+MEMORY FOR THE WEIGHTS OF A 7B MODEL
+  32-bit (float32)     4 bytes per weight    ~28 GB
+  16-bit (fp16/bf16)   2 bytes per weight    ~14 GB
+  4-bit  (NF4, QLoRA)  0.5 bytes per weight  ~3.5 GB
+The red dashed line on the slide is a free Colab T4 GPU (16 GB). Note that
+training also needs extra memory for activations, so ~14 GB of weights does
+not fit in practice on a 16 GB GPU.
+
+DOES IT FIT ON A 16 GB GPU?
+  0.5B - 1B   LoRA: yes, easily     QLoRA: yes (not needed)
+  3B          LoRA: yes, tight      QLoRA: yes, comfortable
+  7B - 8B     LoRA: usually not     QLoRA: fits
+  13B+        LoRA: no              QLoRA: needs a 24 GB+ GPU
+
+WHEN TO USE WHICH
+- QLoRA: the model is too big for your GPU with normal LoRA.
+- LoRA: the model fits. It trains a bit faster (no 4-bit <-> 16-bit
+  conversion on every step).
+- QLoRA is not useful for BERT: BERT (110M) is already tiny.
+
+REQUIREMENTS
+An NVIDIA GPU and the bitsandbytes library.
+In Colab: Runtime -> Change runtime type -> GPU.
+
+ONE-LINE SUMMARY
+QLoRA is not a new adapter method. It is LoRA plus a memory trick for the
+frozen part.
+
+
+SLIDE 07 / 12  -  NF4: the 4-bit NormalFloat format
+Image: 07_nf4_format.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A bell curve of typical model weights, with two rows of tick marks comparing
+where INT4 and NF4 place their 16 levels, plus the four steps of block-wise
+quantization and double quantization.
+
+THE PROBLEM
+4 bits can represent only 2^4 = 16 different values. Every weight must be
+rounded to one of 16 levels. The question is WHERE to place those levels so the
+rounding error is as small as possible.
+
+THE KEY OBSERVATION
+In a trained model most weights are small numbers close to zero; only a few are
+large. This is roughly a normal (bell-curve) distribution - the "Normal" in
+NormalFloat.
+
+INT4 vs NF4
+- INT4 spaces its 16 levels EVENLY from -1 to +1.
+- NF4 places its levels CLOSER TOGETHER near zero (where most weights are) and
+  further apart at the edges. Technically each level covers an equal share of
+  the bell curve (quantiles of the normal distribution).
+Result: most weights get rounded to a NEARBY level, so the total error is
+smaller. The tick marks on the slide use the real NF4 level values.
+
+HOW WEIGHTS ARE CONVERTED (BLOCK-WISE)
+1. Split the weights into blocks of 64.
+2. Divide every weight in a block by the block's largest absolute value, so
+   they fall between -1 and +1. Save that scale factor.
+3. Round each scaled weight to the nearest NF4 level and store it as a 4-bit
+   code (0 - 15).
+4. When needed: code -> level x scale = approximately the original weight,
+   computed in 16-bit.
+
+SMALL EXAMPLE
+  Original weights :  0.12   -0.03    0.40   -0.80
+  Max absolute     :  0.80  (divide everything by 0.80)
+  Scaled           :  0.15   -0.04    0.50   -1.00
+  Rounded to NF4   :  nearest of the 16 levels, stored as 4-bit codes
+
+DOUBLE QUANTIZATION
+Every block of 64 has its own scale factor, and those take memory too. Double
+quantization compresses the scale factors themselves, saving about 0.4 bits
+per weight (about 3 GB on a 65B model, per the QLoRA paper).
+In code: bnb_4bit_use_double_quant=True
+
+THE THREE 4-BIT OPTIONS
+  INT4  evenly spaced levels           lowest accuracy for weights
+  FP4   floating-point style levels    better
+  NF4   dense near zero (bell curve)   best for normally distributed weights
+
+ANALOGY
+If most of a city lives in the centre, put more bus stops in the centre and
+fewer in the suburbs. Most people then have a stop close by.
+
+
+SLIDE 08 / 12  -  BitsAndBytesConfig: the 4 settings to know
+Image: 08_bitsandbytes_config.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The BitsAndBytesConfig code, a table of the four settings you actually need
+for QLoRA, and a few optional settings.
+
+THE CODE
+  bnb_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_quant_type="nf4",
+      bnb_4bit_compute_dtype=torch.bfloat16,   # torch.float16 on a T4
+      bnb_4bit_use_double_quant=True,
+  )
+  model = AutoModel...from_pretrained(name, quantization_config=bnb_config,
+                                      device_map="auto")
+
+THE FOUR SETTINGS
+1. load_in_4bit=True  (default False)
+   Store the frozen weights in 4-bit. The alternative load_in_8bit=True
+   stores them in 8-bit (more memory, slightly better precision).
+   Use one or the other, never both.
+2. bnb_4bit_quant_type="nf4"  (default "fp4")
+   The 4-bit format. NF4 is the QLoRA standard and best for model weights.
+   The default is fp4, so always set "nf4" explicitly.
+3. bnb_4bit_compute_dtype  (default float32)
+   Weights are STORED in 4-bit but converted to this type for the math.
+   bfloat16 on newer GPUs (A100, L4, RTX 30/40). float16 on the free Colab T4,
+   which does not support bfloat16 natively. float32 works but is slower.
+   T4-safe code:
+     compute = (torch.bfloat16
+                if torch.cuda.get_device_capability()[0] >= 8
+                else torch.float16)
+4. bnb_4bit_use_double_quant=True  (default False)
+   Also compress the per-block scale factors (~0.4 bits per weight saved,
+   almost no accuracy loss).
+
+OPTIONAL SETTINGS (GOOD TO KNOW)
+  llm_int8_skip_modules        keep some layers un-quantized, e.g. a new
+                               classifier head ["score"] (used in our notebook)
+  bnb_4bit_quant_storage       packing type, advanced multi-GPU (FSDP) setups
+  llm_int8_threshold           outlier threshold, 8-bit mode only
+  llm_int8_enable_fp32_cpu_offload  put some layers on CPU if the GPU is too
+                               small
+
+REMEMBER IT AS
+STORE in 4-bit, using NF4, COMPUTE in 16-bit, DOUBLE-COMPRESS the scales.
+
+NEXT STEP IN CODE
+Add prepare_model_for_kbit_training(model) before get_peft_model(...).
+It keeps sensitive layers (like layer norms) in higher precision and turns on
+gradient checkpointing, which makes 4-bit training more stable. The rest of
+the LoRA code is unchanged.
+
+
+SLIDE 09 / 12  -  bitsandbytes (bnb): the engine behind QLoRA
+Image: 09_bitsandbytes_library.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The four main features of the bitsandbytes library, the three pieces the full
+QLoRA recipe uses, hardware requirements, common errors and a quick check.
+
+WHAT IT IS
+"bnb" = bitsandbytes, an open-source library created by Tim Dettmers (author
+of the QLoRA paper). It provides fast GPU code for running and training models
+in low precision. BitsAndBytesConfig only passes your settings to it; you
+rarely import it directly because transformers and peft call it for you.
+Install: pip install bitsandbytes
+
+ITS FOUR MAIN FEATURES
+1. 4-bit quantization (NF4, FP4) - shrinks the MODEL.
+   Used as: load_in_4bit=True
+2. LLM.int8() - 8-bit loading that keeps rare "outlier" values in 16-bit for
+   accuracy. Used as: load_in_8bit=True
+3. 8-bit optimizers - stores the optimizer's internal state (e.g. AdamW's) in
+   8-bit, shrinking the OPTIMIZER. Used as: optim="adamw_bnb_8bit" or
+   bnb.optim.AdamW8bit(...)
+4. Paged optimizers - moves optimizer memory to CPU RAM when the GPU runs
+   short, avoiding out-of-memory crashes. Used as: optim="paged_adamw_8bit"
+   or bnb.optim.PagedAdamW8bit(...)
+
+THE FULL QLoRA RECIPE USES THREE bnb PIECES
+1. NF4 for the frozen model
+2. Double quantization for the scale factors
+3. A paged optimizer for memory spikes
+
+HARDWARE
+Built for NVIDIA GPUs with CUDA - fully supported and fastest there. Newer
+versions add partial support for other hardware, but use a GPU runtime for
+class. On a CPU-only runtime, load_in_4bit=True usually fails.
+
+COMMON ERRORS AND FIXES
+  No GPU found / CUDA not available
+      -> Runtime -> Change runtime type -> GPU
+  bitsandbytes not installed / import error
+      -> pip install -U bitsandbytes, then restart the session
+  bfloat16 errors on a T4
+      -> use torch.float16 as bnb_4bit_compute_dtype
+  Version mismatch errors
+      -> pip install -U bitsandbytes transformers peft accelerate
+
+QUICK CHECK THAT bnb WORKS
+  import torch, bitsandbytes as bnb
+  print(torch.cuda.is_available())   # must be True
+  print(bnb.__version__)
+
+ONE-LINE SUMMARY
+bnb shrinks the MODEL (4/8-bit loading) and the OPTIMIZER (8-bit, paged), so
+big models fit on small GPUs.
+
+
+SLIDE 10 / 12  -  Optimizers: AdamW and its alternatives
+Image: 10_optimizers.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A comparison table of optimizers (memory, idea, when to use), why AdamW uses
+memory, example code and a quick decision guide.
+
+WHAT AN OPTIMIZER DOES
+After loss.backward() computes the gradients, optimizer.step() decides HOW to
+update each trainable weight. AdamW is the default for fine-tuning; most
+alternatives exist to save memory.
+
+THE OPTIONS
+  AdamW             adaptive step per weight + weight decay. DEFAULT.
+  Adam              like AdamW but handles weight decay less cleanly. Older code.
+  SGD + momentum    plain gradient steps, low memory. Common for vision models,
+                    tricky to tune for transformers.
+  AdamW 8-bit (bnb) AdamW with its state in 8-bit. Same results, less memory.
+  Paged AdamW 8-bit (bnb)  8-bit + spills to CPU RAM on memory spikes.
+                    The QLoRA standard.
+  Adafactor         stores compressed statistics. Very low memory (used for T5).
+  Lion              uses only the sign of the update. Saves memory; needs a
+                    learning rate about 3-10x LOWER than AdamW.
+  LAMB              AdamW adjusted per layer. Huge-batch pre-training.
+The memory dots on the slide are relative: 4 dots = AdamW's 2 extra values
+per trainable weight.
+
+WHY AdamW USES MEMORY
+For every trainable weight it keeps two extra numbers: the running average of
+the gradient (momentum) and of the squared gradient (variance). With LoRA
+that is small (few trainable weights). With full fine-tuning it can be larger
+than the model itself - that is when the alternatives matter.
+
+CODE
+  optimizer = torch.optim.AdamW(params, lr=2e-4)
+  optimizer = bnb.optim.AdamW8bit(params, lr=2e-4)
+  optimizer = bnb.optim.PagedAdamW8bit(params, lr=2e-4)
+  # with the Hugging Face Trainer, change one setting:
+  TrainingArguments(optim="paged_adamw_8bit")   # or "adamw_torch",
+                                                # "adamw_bnb_8bit", "adafactor"
+
+QUICK DECISION
+  Fits in memory          -> AdamW
+  QLoRA / tight GPU       -> paged_adamw_8bit
+  Extremely tight memory  -> Adafactor
+  Experimenting           -> Lion (remember: lower learning rate)
+
+NOTE
+Newer optimizers (e.g. Muon, Sophia) appear regularly in research, but none
+has replaced AdamW as the standard for fine-tuning.
+
+
+SLIDE 11 / 12  -  lr: the learning rate
+Image: 11_learning_rate.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The update formula, three loss curves (too high, just right, too low), how to
+read numbers like 2e-5, typical values, and schedulers.
+
+WHAT IT IS
+lr = learning rate. It controls HOW BIG a step the optimizer takes each time
+it updates the weights.
+  new_weight = old_weight - lr x gradient
+The gradient gives the DIRECTION that reduces the error; lr gives the SIZE of
+the step. (AdamW adjusts the step per weight, but lr still sets the overall
+scale.)
+
+ANALOGY
+Walking down a foggy hill to reach the lowest point (minimum loss). The
+gradient tells you which way is downhill; the learning rate is your stride.
+
+THE THREE CURVES
+- Too high: huge steps overshoot the bottom. Loss bounces around, goes up, or
+  becomes "nan".
+- Just right: loss drops smoothly.
+- Too low: tiny steps. Loss barely moves.
+
+READING THE NUMBERS (scientific notation)
+  1e-3 = 0.001      2e-4 = 0.0002
+  5e-5 = 0.00005    2e-5 = 0.00002
+
+TYPICAL VALUES
+  Full fine-tuning          1e-5 to 5e-5   (pretrained weights are already
+                                            good: make small careful changes)
+  Manual partial (BERT)     2e-5 to 5e-5
+  LoRA / QLoRA              1e-4 to 3e-4   (adapters start from scratch, B = 0,
+                                            so they need bigger steps)
+  Training from scratch     1e-4 to 1e-3
+
+SCHEDULERS: THE lr CHANGES DURING TRAINING
+- Warmup: start very small and increase over the first steps, to avoid big
+  early mistakes.
+- Decay: gradually reduce it toward the end, for fine adjustments.
+  from transformers import get_linear_schedule_with_warmup
+  scheduler = get_linear_schedule_with_warmup(optimizer,
+                  num_warmup_steps=50, num_training_steps=500)
+  # in the loop, after optimizer.step():  scheduler.step()
+The Hugging Face Trainer does this automatically.
+
+PRACTICAL RULE
+Loss explodes -> LOWER lr. Loss barely moves -> RAISE lr.
+
+CLASS EXERCISE
+Run the 8-sentence demo with lr = 1e-2, 2e-5 and 1e-8 and compare the
+printed loss values. Students will see all three curves for real.
+
+
+SLIDE 12 / 12  -  LoRA -> QLoRA: what changes in the code
+Image: 12_lora_vs_qlora_code.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The LoRA setup code (left) and the QLoRA setup code (right), side by side and
+lined up. The highlighted lines on the right are the ONLY changes.
+
+THE CHANGES
+1. Extra imports:
+     from transformers import BitsAndBytesConfig
+     from peft import prepare_model_for_kbit_training
+     import bitsandbytes as bnb
+2. The 4-bit config:
+     bnb_config = BitsAndBytesConfig(load_in_4bit=True,
+         bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16,
+         bnb_4bit_use_double_quant=True)
+3. Pass it when loading the model:
+     quantization_config=bnb_config, device_map="auto"
+4. Prepare the 4-bit model for training:
+     model = prepare_model_for_kbit_training(model)
+5. (Recommended) the paged 8-bit optimizer:
+     optimizer = bnb.optim.PagedAdamW8bit(params, lr=2e-4)
+
+WHAT STAYS EXACTLY THE SAME
+- LoraConfig: r, lora_alpha, target_modules, task_type
+- get_peft_model(model, config)
+- The training loop: forward, loss.backward(), optimizer.step(),
+  optimizer.zero_grad()
+- Testing and prediction
+- Saving: model.save_pretrained(...) still saves only the small adapter
+
+LOADING THE SAVED QLoRA ADAPTER LATER (Program 3 in the notebook)
+  base = AutoModel...from_pretrained(base_name,
+             quantization_config=bnb_config, device_map="auto")
+  model = PeftModel.from_pretrained(base, "my-qlora-adapter")
+Load the base in 4-bit again so it matches the training setup.
+
+ONE-LINE SUMMARY FOR CLASS
+QLoRA = LoRA + "load the frozen model in 4-bit". The adapters and the
+training loop do not change at all.

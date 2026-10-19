@@ -1,0 +1,41 @@
+Prompt Engineering:
+
+1. Zero Shot Prompting:
+
+   Can you convert the sentence to Tamil. Hi How are you ?
+
+2. Few Shot Prompting:
+
+   Can you Convert my image similar to that of the other image background
+
+3 Chain of Thoughts:
+
+   Hierarchically letting LLM to generate.
+
+4. Role Based / Persona Prompting
+
+   Imagine you being PR Reviewer. CAn you check if my Code is correct.
+
+5. Instruction Based Prompting
+
+   Can you create PPT with each having 50 lines with bold and underlined heads
+
+6. Iterative Prompting
+
+    Claude MCP ---> logs capture ---> response ---> Generate
+
+7. Self-Consistency Prompting
+
+   Choose the option and then decide the best one.
+
+8. Contextual Prompting
+
+   Can you give best sold product from this excel and tell me best 5 products.
+
+9. Meta-Prompt (data of the data)
+
+    can you provide me the prompt have sun at the backdrop similar to rajini in thalapathy movie
+
+10.Negative Prompting
+
+    how to write a paragraph to avoid plagiarism issue.

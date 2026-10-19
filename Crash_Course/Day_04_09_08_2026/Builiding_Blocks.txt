@@ -1,0 +1,14 @@
+| Building Block | ANN | CNN       | RNN       | LSTM      | Transformer |
+| -------------- | --- | --------- | --------- | --------- | ----------- |
+| Linear         | ✅   | ✅         | ✅         | ✅         | ✅           |
+| ReLU           | ✅   | ✅         | Sometimes | Sometimes | ✅           |
+| Sigmoid        | ✅   | Sometimes | Internal  | Internal  | Rare        |
+| Dropout        | ✅   | ✅         | ✅         | ✅         | ✅           |
+| BatchNorm      | ✅   | ✅         | Rare      | Rare      | Rare        |
+| Conv2D         | ❌   | ✅         | ❌         | ❌         | ❌           |
+| MaxPool        | ❌   | ✅         | ❌         | ❌         | ❌           |
+| Flatten        | ❌   | ✅         | ❌         | ❌         | ❌           |
+| Embedding      | ❌   | ❌         | ✅         | ✅         | ✅           |
+| RNN Layer      | ❌   | ❌         | ✅         | ❌         | ❌           |
+| LSTM Layer     | ❌   | ❌         | ❌         | ✅         | ❌           |
+| Attention      | ❌   | ❌         | ❌         | ❌         | ✅           |

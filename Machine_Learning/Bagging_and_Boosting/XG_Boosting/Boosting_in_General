@@ -1,0 +1,26 @@
+1. DecisionTree:
+   1.1 Forms a Tree based upon Criteria and best splits and produces the
+   result for Regression or Classification
+
+2. RandomForest
+   2.1 It forms different tree (n_estimator_10) and executes the same process
+   of Regression or Classification.
+      2.1.1 Since it is multiple tree which does the process
+           a. Classification:
+                a.1 Majority
+           b. Regression:
+                b.1 Average
+   2.3 This Random Forest does the process in parallel way
+   2.4 Parallel processing technique is called "Bagging"
+   2.5 This comes under ensemble technique
+       2.5.1 Ensemble : More than one tree combined to produce result
+3. Boosting:
+   3.1 Sklearn
+   3.2 xgboost
+   pip install xgboost
+   3.3 It does process on series way
+      3.3.1 First Tree will be formed and then it predicts
+      3.3.2 On the prediction, it see the error or loss
+      3.3.3 now next tree will be formed based on the loss criterion
+      3.3.4 Weight will be adjusted so that different criterion is
+      formed and process the prediction

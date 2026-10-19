@@ -1,0 +1,37 @@
+faiss-cpu
+sentence-transformers
+tensorflow
+langchain #pip install -U langchain
+
+# OpenAI integration
+langchain-openai #pip install -U langchain-openai
+
+# Anthropic integration
+langchain-anthropic #pip install -U langchain-anthropic
+
+# Or install all common integrations
+langchain[all] #pip install 'langchain[all]'
+
+chromadb #pip install chromadb
+
+langchain-cli #pip install -U langchain-cli
+
+gensim #word to vector
+
+langchain
+transformers
+torch
+sentence-transformers
+torchvision # for diffusers image generation
+accelators #for diffusers image generation
+plotly #for advanced visualization
+
+streamlit  #UI interface for LLM
+
+langchain_experimental #for semantic chunking
+mcp[cli] --break-system-packages #for MCP
+
+lora
+peft
+qloara
+datasets

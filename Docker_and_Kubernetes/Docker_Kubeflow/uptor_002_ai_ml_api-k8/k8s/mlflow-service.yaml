@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-service
+spec:
+  # No "type:" -- defaults to ClusterIP, i.e. reachable from other Pods in
+  # the cluster (api reaches it at http://mlflow-service:5000) but not from
+  # outside it. That's deliberate: unlike the api, MLflow has no reason to
+  # be exposed to the world. To open the tracking UI from your own machine
+  # anyway, use `kubectl port-forward svc/mlflow-service 5001:5000` and
+  # browse to http://localhost:5001 -- see the guide for the full command.
+  selector:
+    app: mlflow
+  ports:
+    - port: 5000
+      targetPort: 5000

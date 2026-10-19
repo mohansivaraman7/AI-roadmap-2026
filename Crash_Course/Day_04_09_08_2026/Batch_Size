@@ -1,0 +1,18 @@
+Rows 1000
+max_iteration = 1000
+
+
+Iteration 1: 1000 Forward + Backward
+
+Rows 1000
+Epoch = 100
+Batch Size = 100
+
+Iteration 1 (Epoch1)
+
+only 100 Rows gets processed ---> Forward + Backward
+next 100 Rows gets processed ---> F + B
+.
+.
+.
+.last 100 Rows gets processed --->  F + B

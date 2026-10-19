@@ -1,0 +1,41 @@
+SLIDE 01 / 12  -  Four ways to fine-tune a model
+Image: 01_methods_compared.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+Four columns, one per method. Each column is a stack of model layers with the
+classifier head on top. Colour shows what happens to each layer:
+  - Orange      = trainable (weights change during training)
+  - Grey + lock = frozen (weights never change), stored in 16/32-bit
+  - Blue + lock = frozen, stored in 4-bit (QLoRA only)
+  - Small orange "A.B" box = a LoRA adapter: new, small, trainable matrices
+
+HOW TO EXPLAIN IT
+1. Full fine-tuning: every layer is orange. All weights are updated, so it
+   needs the most memory and you save a full copy of the model per task.
+2. Manual partial fine-tuning: we freeze most layers ourselves with
+   requires_grad = False and unfreeze only the top layers and the head.
+   The model's OWN weights in those top layers get changed.
+3. LoRA: the whole model is frozen (grey). Small A.B adapters are attached
+   beside each targeted layer, and only they (plus the head) learn.
+   The original model is never modified.
+4. QLoRA: exactly like LoRA, but the frozen model is stored in 4-bit (blue),
+   which cuts its memory by roughly 4x.
+
+KEY POINTS
+- All four methods learn from YOUR data. The difference is WHERE the learning
+  is stored: in existing weights (full, manual) or in new adapters (LoRA, QLoRA).
+- Manual and full fine-tuning save a full model. LoRA and QLoRA save only a
+  small adapter file (a few MB).
+- Trainable %: full = 100%, manual (our BERT program) ~13%, LoRA/QLoRA < 1%.
+
+COMMON STUDENT QUESTIONS
+Q: Is manual partial fine-tuning the same as LoRA, just without a library?
+A: No. Manual EDITS existing layers. LoRA ADDS new weights and leaves the
+   original untouched. The library (peft) only makes adding them convenient.
+Q: Is QLoRA a different adapter technique?
+A: No. Same A and B adapters as LoRA. Only the storage of the frozen model
+   changes (4-bit).
+
+ONE-LINE SUMMARY
+Manual edits some of the model's own weights; LoRA/QLoRA leave the model
+untouched and store the learning in small add-on adapters.

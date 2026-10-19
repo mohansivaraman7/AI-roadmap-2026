@@ -1,0 +1,29 @@
+1. LLM
+2. Models
+   2.1 Direct API
+   2.2 HuggingFace
+       2.2.1 API
+       2.2.2 Transformers (Pipeline) (our code)
+       2.2.3 Direct System Model Service(today)
+3. UI
+   3.1 Pycharm Terminal
+   3.2 Streamlit (today)
+4. Data Retrieve
+   4.1 User Query ----> LLM
+       (what is the way to get the certificate)
+       4.1.1 Query will go LLM and LLM will try fetch it from DB(Vector)
+       4.1.2 When user sends message "HI"
+             YES - Even normal message will go to DB no matter what .(today)
+       4.1.3 k = 3 (fetch 3 similar search document)
+       what is way to get certificate ---embedding---> [10 2 4 8 22 98]
+
+       It will go db and fetch similar three document  [10 4 6 9 21 99]
+                                                       [11 5 4 8 22 97]
+                                                       [10 2 5 8 22 98]
+       4.1.4 K = 3 (KNN (n_neighbours=3)
+       4.1.5 ANN (Approximate Nearest Neighbor)
+       4.1.6 As seen above it will only return 3 matching response but not the order
+       4.1.7 We can use Ranking mechanism for producing best result instead of just search result
+       4.1.8 Retrieval (bi-Encoder)
+             Re-Ranking (Cross-Encoder)
+

@@ -1,0 +1,201 @@
+======================================================================
+ 07 — AI AGENTS: AN LLM + TOOLS + A LOOP (AND DEPLOYING IT)
+ Programs: 07_agent/agent.py, 07_agent/app.py, Dockerfile
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 From "model" to "agent"
+----------------------------------------------------------------------
+In step 6 we trained a tiny GPT. Real LLMs are the same idea at huge
+scale — but on their own, they can only produce TEXT. They can't:
+   - do exact maths reliably (they predict digits like any other token)
+   - know today's date or live data
+   - read your database, send an email, save a file
+
+An AGENT gives the LLM HANDS: tools it can ask to use.
+
+   AGENT = LLM (the brain)  +  TOOLS (the hands)  +  LOOP (keep going until done)
+
+
+1.2 How tool use works — the LLM never runs code itself
+----------------------------------------------------------------------
+   1. You send: the conversation + a LIST of tools (name, description, inputs).
+   2. The LLM reads the question and decides:
+        (a) answer directly, OR
+        (b) reply "please call calculator with {'expression': '37*48'}"
+   3. YOUR Python code sees that request, runs the real function,
+      and sends the result back: "calculator returned 1776".
+   4. The LLM continues with the new information. It may ask for
+      another tool, or give the final answer.
+   5. Repeat until the LLM stops asking for tools.
+
+        user ──> LLM ──"use calculator(37*48)"──> your code runs it
+                  ^                                     │
+                  └──────────── "1776" ─────────────────┘
+                  │
+                  └──> "37 × 48 = 1776"  (final answer)
+
+ANALOGY: a manager (LLM) with assistants (tools). The manager can't
+use the spreadsheet themselves, but knows WHEN to ask the finance
+assistant, reads the result, and writes the final report.
+
+HOW does the LLM know which tool to use? Only from the tool's NAME and
+DESCRIPTION. Writing clear descriptions is the most important skill in
+building agents — it is prompt engineering for tools.
+
+
+1.3 Why the loop matters
+----------------------------------------------------------------------
+Complex questions need several steps:
+   "What's 37×48, and explain self-attention, and save that as a note."
+   -> calculator  ->  lookup_concept  ->  save_note  ->  final answer
+The loop lets the LLM chain tools. A MAX_TURNS limit stops it from
+looping forever (a real-world safety measure).
+
+
+1.4 Safety: never trust tool inputs blindly
+----------------------------------------------------------------------
+The LLM writes the tool inputs. Treat them like input from a stranger.
+Example: our calculator does NOT use Python's eval(), which would run
+ANY code (e.g. delete files). It parses the expression and allows only
+numbers and + - * / **. Our test showed it rejects "__import__('os')".
+Real agents also limit permissions, log every tool call, and ask a
+human before risky actions (sending emails, payments, deleting data).
+
+
+1.5 Deployment: from a script to a service
+----------------------------------------------------------------------
+   agent.py   : the brain + tools + loop (runs in a terminal)
+   app.py     : wraps it in a WEB API so apps and websites can call it
+   Dockerfile : packs code + Python + libraries into one CONTAINER that
+                runs the same on any server or cloud
+
+   API (Application Programming Interface): a URL other programs call.
+      POST /chat  with JSON {"session_id": "...", "message": "..."}
+      returns JSON {"reply": "..."}
+   FastAPI  : a Python library for building APIs quickly
+   uvicorn  : the web server that actually runs the FastAPI app
+   Docker   : "ship the whole kitchen, not just the recipe" — it
+              removes "works on my machine" problems.
+   Environment variable (ANTHROPIC_API_KEY): secrets are passed in at
+              run time, NEVER written in the code.
+   SESSION  : each user gets their own chat history (session_id), so
+              the agent remembers earlier messages in that conversation.
+
+
+PART 2: NEW TERMS IN THESE PROGRAMS
+======================================================================
+anthropic           : the official Python library for calling Claude
+client.messages.create(...) : send a conversation, get the LLM's reply
+system              : the "system prompt" — standing instructions for the LLM's role
+tools / TOOLS       : the list of tool descriptions sent to the LLM
+input_schema        : JSON Schema describing a tool's inputs (names, types, required)
+stop_reason         : why the LLM stopped: "tool_use" = it wants a tool;
+                      "end_turn" = it's finished
+tool_use block      : the LLM's request: tool name + inputs + an id
+tool_result         : your reply with the output, matched by tool_use_id
+messages / history  : the full conversation list, resent on every call
+                      (LLMs have no memory between calls — YOU keep the history)
+ast                 : Python's code parser, used for the safe calculator
+max_turns           : the loop limit
+@app.post("/chat")  : FastAPI "decorator" — this function handles POST /chat
+pydantic BaseModel  : defines and validates the JSON the API accepts
+
+
+PART 3: CODE WALKTHROUGH — agent.py
+======================================================================
+--- Section 1: the tools ---
+Plain Python functions: calculator, current_time, lookup_concept, save_note.
+Nothing AI about them. TOOL_FUNCS maps each tool name to its function.
+
+--- Section 2: describing tools to the LLM ---
+  schema("calculator", "Evaluate arithmetic like '12*(3+4)'. Use for any math.",
+         expression="the arithmetic expression")
+-> Builds the JSON description the LLM reads. The LLM decides WHEN to use
+   a tool purely from this text. Vague description = tool used badly.
+
+  SYSTEM = "You are a friendly tutor..."
+-> The system prompt sets the agent's personality and role.
+
+--- Section 3: the loop (the heart of the agent) ---
+  for _ in range(max_turns):
+      resp = client.messages.create(model=..., system=SYSTEM,
+                                    tools=TOOLS, messages=messages)
+-> Send the whole conversation + tool list to Claude.
+
+      messages.append({"role": "assistant", "content": resp.content})
+-> Save the LLM's reply in the history (including any tool requests).
+
+      if resp.stop_reason != "tool_use":
+          return the text
+-> No tool needed -> we have the final answer.
+
+      for block in resp.content:
+          if block.type == "tool_use":
+              out = TOOL_FUNCS[block.name](**block.input)
+-> Look up the requested function and run it with the LLM's inputs.
+   **block.input turns {"expression": "37*48"} into expression="37*48".
+   try/except: if the tool fails, we send the ERROR back so the LLM can
+   recover, instead of crashing.
+
+      messages.append({"role": "user", "content": results})
+-> Send tool results back (as a "user" turn, matched by tool_use_id),
+   then loop again.
+
+--- if __name__ == "__main__": ---
+A simple terminal chat that keeps `history` across questions.
+
+
+PART 4: CODE WALKTHROUGH — app.py and Dockerfile
+======================================================================
+  SESSIONS: dict[str, list] = {}
+-> One chat history per session_id, kept in memory. (Lost on restart —
+   in production use Redis or a database.)
+
+  @app.post("/chat")
+  def chat(body: ChatIn):
+      history = SESSIONS.setdefault(body.session_id, [])
+      history.append({"role": "user", "content": body.message})
+      return {"reply": run_agent(history)}
+-> Receive a message, add it to that user's history, run the SAME agent
+   loop, return the answer as JSON. The web layer is just a thin wrapper.
+
+  @app.get("/health")  -> lets cloud platforms check the service is alive.
+  @app.get("/")        -> a tiny HTML chat page that calls /chat with fetch().
+
+  Dockerfile:
+    FROM python:3.12-slim          start from a small Linux + Python image
+    RUN pip install -r requirements.txt   install libraries
+    COPY agent.py app.py ./        add our code
+    CMD ["uvicorn", "app:app", ...]  start the web server on port 8000
+  The API key is NOT in the image; it's passed with -e at run time.
+
+
+PART 5: CONNECTING IT ALL BACK
+======================================================================
+   01 LSTM          read in order, remember
+   02 Attention     look back at everything
+   03 Self-attn     every word looks at every word, in parallel
+   04 Multi-head    many viewpoints at once
+   05 Transformer   attention + FFN + residual + norm + positions, stacked
+   06 GPT           train it to predict the next token; generate by repeating
+   07 Agent         take a HUGE trained GPT-style model, give it tools and a loop
+
+The model inside Claude is (at its core) the step-6 recipe at massive
+scale, plus training to follow instructions and use tools safely.
+
+
+PART 6: DISCUSSION QUESTIONS & EXERCISES
+======================================================================
+1. Add a tool: write a function, add it to TOOL_FUNCS, describe it in TOOLS.
+   Ideas: word_count(text), convert_currency(amount, rate), roll_dice().
+2. Make a tool description vague ("does stuff"). Does the agent still use it correctly?
+3. Why does the agent resend the WHOLE history on every call?
+4. Which tools would you require human approval for in a real company? Why?
+5. What breaks if two server copies run behind a load balancer with in-memory SESSIONS?
+
+ONE-LINE SUMMARY: An agent is an LLM in a loop that can request tools;
+your code runs the tools and returns results until the LLM has a final
+answer — and a small web API + Docker makes it deployable anywhere.

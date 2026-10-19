@@ -1,0 +1,39 @@
+K-Nearest Neighbour
+1. Supervised
+2. Regressor and Classifier
+3. Distance based algorithm
+ 3.1 When a model is working on distance based metrics
+     we need to ensure all our columns or independent data
+     to be in same scale.
+
+     a. StandardScaler - Normal Distribution
+     b. MinMaxScaler   - Uniform Distribution
+
+Distance Based Algorithm:
+
+1. Row based evaluation based on distance metrics
+  1.1 Euclidean
+  1.2 Manhattan
+
+Fever_Temp    TiredNess      Cough       Corona
+  100           Yes (1)     Yes (1)     True
+  100           No (0)       No (0)     False
+  0.9           0.8           0.7
+
+
+         x_train                             y_train
+sq_feet  no_rooms floor_no                House_Purchase
+1000       3        1        (417)           True
+1500       3        2        (418)           True
+800        2        10       (200)           False
+1200       4        2        (421)           False
+
+           x_test
+1400       2         1                        ?
+standard_scaling
+0.9       0.85      0.65
+Distance  0.9 * 0.85 * 0.65 ----->              415   True
+
+KNNRegress(n_neighbour = 2))
+2 -- True
+1 -- False

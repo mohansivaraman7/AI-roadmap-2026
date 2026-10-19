@@ -1,0 +1,138 @@
+======================================================================
+ 00 — BASICS: THE WORDS YOU WILL SEE IN EVERY PROGRAM
+ Read this first. Every later guide assumes these ideas.
+======================================================================
+
+1. WHY THIS COURSE EXISTS
+----------------------------------------------------------------------
+Large Language Models (ChatGPT, Claude, Gemini, Llama) are all built
+from one design called the TRANSFORMER. The Transformer did not appear
+from nowhere. It was the answer to problems in older models:
+
+   LSTM  -->  Attention  -->  Self-Attention  -->  Multi-Head  -->  Transformer  -->  GPT  -->  Agents
+   (2000s)    (2014)          (2017)               (2017)          (2017)           (2018+)   (2023+)
+
+If you understand WHY each step was invented (what problem it fixed),
+LLMs stop being magic.
+
+
+2. HOW A COMPUTER "SEES" TEXT
+----------------------------------------------------------------------
+Computers only understand numbers. So text goes through 3 stages:
+
+   "I love cats"
+        |
+        v   TOKENIZE  (split into pieces, give each piece an ID)
+   [12, 845, 3301]
+        |
+        v   EMBED     (turn each ID into a list of numbers = a vector)
+   [[0.2, -1.1, 0.7, ...],     <- "I"
+    [0.9,  0.3, -0.4, ...],    <- "love"
+    [-0.5, 0.8, 1.2, ...]]     <- "cats"
+        |
+        v   MODEL     (LSTM / Transformer mixes and transforms vectors)
+   prediction
+
+TOKEN      : a piece of text. Can be a word, part of a word, or a
+             character. In 06_mini_gpt.py each character is a token.
+VOCABULARY : the list of all tokens the model knows. (VOCAB / V in code)
+VECTOR     : a list of numbers, e.g. [0.2, -1.1, 0.7]. Think of it as a
+             point in space. Similar meanings end up close together.
+EMBEDDING  : the vector for a token. nn.Embedding(VOCAB, 16) is just a
+             table: row 5 = the 16 numbers that represent token 5.
+             The model LEARNS these numbers during training.
+DIMENSION  : how many numbers are in a vector (d, D, d_model in code).
+             Our programs use 2–64. Real LLMs use 4,000–16,000.
+
+
+3. TENSORS AND SHAPES  (the #1 thing beginners get stuck on)
+----------------------------------------------------------------------
+TENSOR : PyTorch's word for "a grid of numbers" of any size.
+   a single number         shape ()
+   a vector                shape (8,)          8 numbers
+   a matrix (table)        shape (5, 8)        5 rows x 8 columns
+   a 3-D block             shape (32, 10, 16)
+
+In our programs, shapes almost always mean:
+   (B, T, D)  =  (Batch, Time, Dimension)
+   B = how many sentences we process at once
+   T = how many tokens in each sentence ("time steps")
+   D = how many numbers describe each token
+
+Example: (32, 10, 16) = 32 sentences, each 10 tokens, each token 16 numbers.
+
+TIP FOR LEARNERS: when confused, print(x.shape). Most bugs are shape bugs.
+
+
+4. THE FEW MATH OPERATIONS YOU NEED
+----------------------------------------------------------------------
+DOT PRODUCT  ( a · b )
+   Multiply matching numbers and add them up.
+   [1, 2, 3] · [4, 0, 1] = 1*4 + 2*0 + 3*1 = 7
+   MEANING: "how similar / aligned are these two vectors?"
+   Big positive = very similar. Near 0 = unrelated.
+   This single idea is the heart of attention.
+
+MATRIX MULTIPLY  ( X @ W )
+   Many dot products at once. In code you see the @ symbol.
+   Used to transform a vector into a new vector ("a learned lens").
+
+SOFTMAX
+   Turns any list of numbers into percentages that add up to 1.
+   [2.0, 1.0, 0.1]  -->  [0.66, 0.24, 0.10]
+   Bigger numbers get a much bigger share.
+
+SIGMOID   squashes any number into the range 0..1  (used as a "dial"/gate)
+TANH      squashes any number into the range -1..1
+GELU / RELU   "activation functions": add non-linearity so the network
+              can learn curves, not just straight lines.
+
+
+5. LAYERS (the building blocks in PyTorch)
+----------------------------------------------------------------------
+nn.Module     : any piece of a neural network. Our models are classes
+                that inherit from nn.Module.
+nn.Linear(a,b): multiply by a learned matrix: turns a vector of size a
+                into a vector of size b. The most common layer.
+nn.Embedding  : the lookup table described above.
+nn.LayerNorm  : rescales numbers so they stay in a healthy range.
+forward()     : the method that says "how data flows through this module".
+                model(x) calls forward(x) for you.
+PARAMETERS    : all the learned numbers (weights) inside the model.
+                Our mini-GPT: ~105,000. GPT-3: 175,000,000,000.
+
+
+6. HOW TRAINING WORKS (the same loop in every program)
+----------------------------------------------------------------------
+   for step in range(N):
+       x, y = make_batch()          # 1. get examples + correct answers
+       pred = model(x)              # 2. model makes a guess
+       loss = cross_entropy(pred, y)# 3. measure how wrong it was
+       opt.zero_grad()              # 4. clear old corrections
+       loss.backward()              # 5. compute which way to nudge each weight
+       opt.step()                   # 6. nudge the weights a little
+
+LOSS          : one number saying "how wrong". Lower = better.
+CROSS ENTROPY : the standard loss for "pick one answer from many"
+                (pick a class, pick the next token).
+GRADIENT      : for each weight, "if I increase this, does loss go up or down?"
+BACKWARD      : PyTorch computes all gradients automatically.
+OPTIMIZER     : the rule that nudges weights (Adam / AdamW = smart version).
+LEARNING RATE : how big each nudge is (lr=0.01). Too big = chaos, too small = slow.
+BATCH         : a group of examples processed together (faster, more stable).
+LOGITS        : raw scores before softmax. model output = logits.
+argmax        : "which position has the highest score" = the model's answer.
+
+ANALOGY: Training is like tuning a radio with 100,000 knobs. Loss tells you
+how much static you hear. The gradient tells you which way to turn each
+knob. The optimizer turns them all a tiny bit. Repeat thousands of times.
+
+
+7. OTHER SMALL THINGS IN THE CODE
+----------------------------------------------------------------------
+torch.manual_seed(0)  : makes random numbers repeatable, so everyone in
+                        class sees the same output.
+torch.no_grad()       : "we're only predicting, not training" (faster).
+.eval()               : switch model to prediction mode.
+.item()               : turn a 1-number tensor into a normal Python number.
+.tolist(), .numpy()   : convert tensors to Python lists / NumPy arrays for printing.

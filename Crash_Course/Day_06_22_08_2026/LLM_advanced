@@ -1,0 +1,27 @@
+Hugging Face:
+
+1. HuggingFace API:
+    During Program it will call API directly and work via online
+
+2. HuggingFace Transformers(Pipeline)
+     During program it will run on local by downloading bulk reference
+
+
+Retrieval:
+
+1. When user hit the query --> what is my leave policy?
+
+   1.1 User Query ---> First LLM ---> DB (Retrieve) ---> LLM Response
+   1.2 When User Does make query ---> [10 34 23 18 90]
+       1.2.1 This number will be verified again the chunked data in the db
+       1.2.2 It checks the Similarity Match and k = 3
+       1.2.3 So we specify to fetch related 3 number of searches
+       1.2.4 So above logic looks similar to KNN but here in LLM we use ANN
+       1.2.5 ANN (Approximate Nearest Neighbor)
+       1.2.6 It will pick 3 similar searches but not in order
+   1.3 So This Searching produces 3 similarity but not in order of accuracy
+   1.4 WHen user "HI" --->
+   1.5 This process is called - Retrieval Pipeline
+   1.6 THis is producing ANN with 3 nearest answer but not in order
+        1.6.1 Binary Encoder
+        1.6.2 We user Cross Encoder - reranking

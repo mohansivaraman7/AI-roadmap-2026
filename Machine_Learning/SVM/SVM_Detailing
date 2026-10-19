@@ -1,0 +1,28 @@
+1. Kernal -
+
+Linear - Straight Line
+poly - curve based fitting
+rbf (radial basis function) - data (complex and non-linear)
+sigmoid (uses s shape) - neural - like scenerios
+
+2. c - Regularization
+
+High value "C" - small error, (OVerfitting)
+Low value "C" - large error(more mistakes) - underfitting
+
+c = 1.0
+
+3. epsilon
+
+margin around the regression line with ignorance of small error
+
+episilon = 0.1
+
+Larger epision ---> focus on big mistakes
+smaller episilon ---> focus on fitting even small deviations
+
+4. gamma
+
+small gamma ---> it will help us getting smoother curve
+large gamma ---> influence, curve may not be that smoother
+

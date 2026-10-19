@@ -1,0 +1,48 @@
+Deep Learning :
+
+Structure Data + UnStructured Data
+
+Major: UnStructure
+
+Library: sklearn < tensorflow < pytorch(inbuilt functionalities)
+
+Evolution:
+
+Perceptron:
+
+Machine Learning: input ---> output
+
+Deep Learning   : Input ---> hidden layer(Neurons - Neural Network ---> output
+
+SKlearn: CSV : MLPRegressor, MLPClassifier
+
+M - Multi L - Layer P- Perceptron
+
+CSV File with larger size(1 Lakh)
+
+Architecture:
+
+ANN ---> Image + CSV
+CNN ---> Image + Video + Audio
+RNN ---> Sequential Data
+LSTM ---> Long Short Term Memory
+Transformer ---> LLM
+
+Process of Deep Learning:
+
+Input ---> 128 Pattern ----> 64 ----> 32-----> Output
+Max_iteration : 1000
+
+Iteration 1: (Iteration is called as epochs)
+input ---> 128 --->64 ---> 32 ---> output (metric and Loss Function)
+
+loss function will be calculated so that i can increase the gradient (weight)
+
+Iteration 2:
+
+input ---> 128 --->64 --->32 ----> output (metric and loss function)
+
+loss function will be calculated so that i can increase the gradient (weight)
+
+Forward Propagation : finding output and loss function
+Backward Propagation : with loss calculate the weights for next iteration

@@ -1,0 +1,157 @@
+======================================================================
+ 05 — THE TRANSFORMER BLOCK
+ Program: 05_transformer_block.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 What a Transformer block is
+----------------------------------------------------------------------
+Multi-head attention alone is not enough. The Transformer wraps it with
+a few extra parts into one repeatable unit — the BLOCK:
+
+        x ──────────────┐
+        │               │  (residual / skip connection)
+     LayerNorm          │
+        │               │
+   Multi-Head Attention │       "TALK": words share information
+        │               │
+        + <─────────────┘
+        │
+        x ──────────────┐
+        │               │
+     LayerNorm          │
+        │               │
+   Feed-Forward (MLP)   │       "THINK": each word processes alone
+        │               │
+        + <─────────────┘
+        │
+     output (same shape as input)
+
+Stack this block N times:
+   our demo: 3   |   GPT-2 small: 12   |   GPT-3: 96   |   large LLMs: ~100+
+
+ANALOGY — a team meeting:
+   attention    = everyone discusses together (exchange info)
+   feed-forward = everyone goes back to their desk and thinks alone
+   repeat for many rounds; each round the understanding gets deeper.
+
+
+1.2 The four ingredients
+----------------------------------------------------------------------
+(1) MULTI-HEAD ATTENTION — from step 4. Mixes info BETWEEN words.
+
+(2) FEED-FORWARD NETWORK (FFN / MLP)
+    Linear(D -> 4D) -> GELU -> Linear(4D -> D), applied to each word
+    separately. It expands, applies a non-linearity, then compresses.
+    Researchers believe much of the model's "knowledge" (facts,
+    patterns) is stored in these FFN weights. In big LLMs, FFNs hold
+    about two-thirds of all parameters.
+
+(3) RESIDUAL CONNECTION  ( x = x + layer(x) )
+    The layer only adds a CORRECTION to x; it doesn't replace x.
+    Why: (a) the original information is never lost;
+         (b) in deep stacks, the training signal can flow straight
+             back through the "+" — without this, 100-layer models
+             wouldn't train.
+    ANALOGY: editing a document with "track changes" instead of
+    rewriting it from scratch each time.
+
+(4) LAYER NORMALIZATION
+    Rescales each word's vector to a standard range (mean 0, spread 1)
+    before each sub-layer. Keeps numbers from exploding or vanishing as
+    they pass through many layers. "Pre-norm" (norm BEFORE the sub-layer,
+    as in our code) is what modern GPTs use; it trains more stably.
+
+
+1.3 The missing piece: POSITION
+----------------------------------------------------------------------
+Surprise: self-attention has NO idea of word order. It only compares
+vectors with dot products. Shuffle the words and each word gets exactly
+the same output (just in a different place).
+   "dog bites man" and "man bites dog" look IDENTICAL to it.
+The program PROVES this.
+
+Fix: add a POSITIONAL ENCODING to each word's embedding before the
+first block:   x = token_embedding + position_vector
+
+Two common ways:
+   SINUSOIDAL (original 2017 paper, used in this program):
+     position vectors made from sine and cosine waves of different
+     speeds. Like a clock with many hands: each position gets a unique
+     combination of hand angles. Nothing to learn.
+   LEARNED (used in GPT-2 and in our 06_mini_gpt.py):
+     an nn.Embedding table: row 0 = vector for position 0, etc.
+   (Modern LLMs often use RoPE, which rotates Q and K by position —
+    same goal, smarter method.)
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+Block             : one Transformer layer (attention + FFN + residuals + norms)
+nn.MultiheadAttention : PyTorch's built-in version of what you wrote in step 4
+ffn               : the feed-forward network
+GELU              : smooth activation function used in GPT models
+residual          : x + something(x)
+LayerNorm         : per-vector rescaling
+positional encoding (pe) : vectors that tell the model WHERE each token is
+nn.Sequential     : run modules one after another (stack blocks)
+.eval() / no_grad : we're not training here, just running
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+  class Block(nn.Module):
+      self.ln1, self.ln2 = nn.LayerNorm(D), nn.LayerNorm(D)
+      self.attn = nn.MultiheadAttention(D, HEADS, batch_first=True)
+      self.ffn  = nn.Sequential(nn.Linear(D, 4*D), nn.GELU(), nn.Linear(4*D, D))
+-> The four ingredients. 4*D is the standard "expand by 4" in the FFN.
+
+      h = self.ln1(x)
+      x = x + self.attn(h, h, h, need_weights=False)[0]
+-> Normalize, then attend. (h, h, h) means Q, K, V all come from the
+   same input = SELF-attention. [0] takes the output (the call also
+   returns weights). "x +" = residual.
+
+      x = x + self.ffn(self.ln2(x))
+-> Normalize, feed-forward, residual. That's the whole block.
+
+  def positions(T, d=D):
+      ... pe[:, 0::2] = sin(pos * freq)
+          pe[:, 1::2] = cos(pos * freq)
+-> Sinusoidal encoding: even slots get sine, odd slots get cosine, each
+   pair with a different wave speed (freq). Result: a unique T x D pattern.
+
+  model = nn.Sequential(Block(), Block(), Block())
+-> A 3-layer Transformer. Prints ~9,840 parameters.
+
+  The experiment:
+      a = encode("dog bites man", use_positions)
+      b = encode("man bites dog", use_positions)
+      same = torch.allclose(a[0], b[2])
+-> Compare the output vector for "dog" in both sentences
+   (position 0 in the first, position 2 in the second).
+   allclose = "are these numbers equal (within rounding)?"
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+   positions=False: is 'dog' encoded the same in both sentences? True
+   positions=True:  is 'dog' encoded the same in both sentences? False
+
+Without positions, the model sees a BAG of words — order is invisible.
+With positions, "dog" at the start (the biter) differs from "dog" at
+the end (the one bitten). This is THE reason positional encoding exists.
+
+
+PART 5: DISCUSSION QUESTIONS
+======================================================================
+1. Remove "x +" from both lines (no residual). Why would a 100-block model then be hard to train?
+2. Why does the FFN have no interaction between words? Which part handles that?
+3. Why is attention "order-blind"? (Dot products and weighted sums don't care about order.)
+4. Our block's input and output shapes are equal. Why is that essential?
+
+ONE-LINE SUMMARY: A Transformer block = attention (talk) + feed-forward
+(think), each wrapped with LayerNorm and a residual; stack many and add
+positions, and you have the body of every LLM.

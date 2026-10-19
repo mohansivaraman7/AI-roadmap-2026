@@ -1,0 +1,155 @@
+======================================================================
+ 03 — SELF-ATTENTION
+ Program: 03_self_attention.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 The big leap (2017, "Attention Is All You Need")
+----------------------------------------------------------------------
+In step 2, attention was a helper ON TOP of LSTMs. In 2017, Google
+researchers asked: what if we delete the LSTM and use ONLY attention?
+
+Instead of a decoder looking at an encoder, every word in a sentence
+looks at every other word in THE SAME sentence. Hence "SELF"-attention.
+
+   "The animal didn't cross the street because IT was too tired."
+   What does "it" refer to? To know, "it" must look at "animal".
+   Self-attention lets "it" attend to "animal" directly, in one step,
+   no matter how far apart they are.
+
+
+1.2 Where do Q, K, V come from now?
+----------------------------------------------------------------------
+Every word's vector x is multiplied by THREE different learned matrices:
+
+     Q = X · Wq     "what am I looking for?"
+     K = X · Wk     "what do I contain / advertise?"
+     V = X · Wv     "what information do I pass on if chosen?"
+
+So each word plays all three roles at once. Training learns Wq, Wk, Wv.
+
+ANALOGY — a networking event:
+   Everyone wears a name tag describing themselves (KEY).
+   Everyone has a question in mind (QUERY).
+   Everyone has knowledge to share (VALUE).
+   Each person compares their question to everyone's name tag, then
+   listens most to the best matches. Everyone does this AT THE SAME TIME.
+
+
+1.3 THE formula (memorise this — it's in every LLM)
+----------------------------------------------------------------------
+
+        Attention(Q, K, V) = softmax( Q · Kᵀ / √d ) · V
+
+   Q · Kᵀ   : every query dotted with every key -> a T x T table of scores
+              (T words, so T x T pairs). Row = who's asking, column = who's being looked at.
+   / √d     : SCALING. With long vectors (big d), dot products get huge,
+              softmax becomes "100% on one word, 0% everywhere else", and
+              training gets stuck. Dividing by √d keeps scores moderate.
+   softmax  : applied to each ROW, so each word's attention sums to 1.
+   · V      : each word's new vector = weighted mix of all words' values.
+
+Output: a new vector for every word, now "aware" of its context.
+
+
+1.4 The causal mask (how GPT-style models work)
+----------------------------------------------------------------------
+A model that GENERATES text predicts word 4 from words 1–3. If, during
+training, word 3 could peek at word 4, it would just copy the answer.
+So we hide the future:
+
+             the  cat  sat   on  mat
+       the [  ✓    ✗    ✗    ✗    ✗ ]
+       cat [  ✓    ✓    ✗    ✗    ✗ ]
+       sat [  ✓    ✓    ✓    ✗    ✗ ]
+        on [  ✓    ✓    ✓    ✓    ✗ ]
+       mat [  ✓    ✓    ✓    ✓    ✓ ]
+
+The ✗ scores are set to -infinity. softmax(-inf) = 0, so those words get
+exactly 0% attention. "Causal" = only the past can cause the present.
+
+   BERT-style (understanding) models : no mask, see the whole sentence.
+   GPT-style (generating) models     : causal mask.
+
+
+1.5 Why this was revolutionary
+----------------------------------------------------------------------
+   LSTM                               SELF-ATTENTION
+   word-by-word loop (slow)           whole sentence at once (fast on GPUs)
+   far words fade                     any word reaches any word in 1 step
+   one bottleneck vector              one vector per word, all kept
+Parallelism is the reason we could train models on the whole internet.
+
+Cost: the T x T table. Double the text length = 4x the work.
+That's why LLMs have a "context window" limit.
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+Wq, Wk, Wv   : the three learned matrices (random here, learned in reality)
+T            : number of tokens (5)
+d            : vector size (8)
+K.T          : K transposed (rows <-> columns), needed so Q @ K.T gives T x T
+math.sqrt(d) : √d for scaling
+torch.triu(..., diagonal=1) : the upper triangle ABOVE the diagonal = "future" positions
+masked_fill(mask, -inf)     : put -infinity where mask is True
+dim=-1       : "along the last axis" = across each row
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+  X = torch.randn(T, d)
+-> 5 words, 8 random numbers each. (In a real model: embeddings.)
+
+  Wq, Wk, Wv = torch.randn(d, d), ...
+-> Three random 8x8 matrices. Random = untrained, so attention patterns
+   have no linguistic meaning yet. That's fine — we're studying the mechanics.
+
+  Q, K, V = X @ Wq, X @ Wk, X @ Wv
+-> Every word gets its own query, key and value. Shapes: (5, 8) each.
+
+  scores = Q @ K.T / math.sqrt(d)
+-> The 5 x 5 table of "how much does word i care about word j". Scaled by √8.
+
+  if causal:
+      future = torch.triu(torch.ones(T, T), diagonal=1).bool()
+      scores = scores.masked_fill(future, float("-inf"))
+-> Build the ✗ pattern from section 1.4 and blank out the future.
+
+  weights = torch.softmax(scores, dim=-1)
+  return weights @ V, weights
+-> Rows become percentages; each word's output = mix of values.
+   We return the weights too, only so we can print them.
+
+  show(...) just prints the table nicely.
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+Full attention table (random weights):
+   sat:  0.00  0.95  0.00  0.02  0.03
+   -> "sat" puts 95% of its attention on "cat". (By luck here; a trained
+      model learns this on purpose: verbs look at their subjects.)
+
+Causal table:
+   upper-right triangle is all 0.00 -> no word sees the future.
+   "the" row is 1.00 on itself -> the first word can only look at itself.
+
+Shapes: input (5, 8) -> output (5, 8)
+   Same shape in and out. That means we can STACK many layers (step 5).
+
+
+PART 5: DISCUSSION QUESTIONS
+======================================================================
+1. Remove "/ math.sqrt(d)" and run again. Are the rows more "all-or-nothing"?
+2. Why must the first row of the causal table always be [1, 0, 0, 0, 0]?
+3. A sentence has 1,000 tokens. How many attention scores per layer?
+   (1,000,000 — this is the cost of self-attention.)
+4. What's the difference between step 2 attention and self-attention?
+   (Where Q, K, V come from: different sequences vs the same sequence.)
+
+ONE-LINE SUMMARY: In self-attention, every word creates a query, key and
+value, and every word attends to every (allowed) word at once using
+softmax(QKᵀ/√d)·V.

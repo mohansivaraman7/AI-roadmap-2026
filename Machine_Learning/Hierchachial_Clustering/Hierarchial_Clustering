@@ -1,0 +1,32 @@
+hierarchical clustering is similar to k- means.
+
+It has two types:
+
+1. top down hierarchical clustering(agglomerative)
+2. bottom up hierarchical clustering(Divise)
+
+Functionality:
+
+1. Each point will be considered as the cluster.
+2. then distance is calculated
+3. then points which is near by to those cluster will become
+one cluster.
+4. this formation happen till the limit we set.
+5. This is also one of the distance based algorithm only.
+
+Models or Library to use:
+
+1. for Agglomerative
+
+  from sklearn.cluster import AgglomerativeClustering
+  from scipy.cluster.hierarchy import linkage,
+
+2. Divisive
+    from sklearn.cluster import BisectingKMeans
+
+Linkage:
+--------
+'ward',
+'single',
+'complete',
+'average'

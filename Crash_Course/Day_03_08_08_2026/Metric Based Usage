@@ -1,0 +1,20 @@
+| Situation                     | Best Metric           | Reason                          |
+| ----------------------------- | --------------------- | ------------------------------- |
+| Balanced Classes              | Accuracy              | Classes are equally represented |
+| Imbalanced Classes            | Precision, Recall, F1 | Accuracy becomes misleading     |
+| Fraud Detection               | Recall                | Missing fraud is costly         |
+| Spam Detection                | Precision             | False alarms are costly         |
+| Medical Diagnosis             | Recall                | Missing disease is dangerous    |
+| General Classification        | F1 Score              | Balance of Precision and Recall |
+| Probability Output Evaluation | ROC-AUC               | Measures ranking quality        |
+| Severe Imbalance              | PR-AUC                | Better than ROC-AUC             |
+
+Regression:
+
+| Situation            | Metric   | Interpretation         |
+| -------------------- | -------- | ---------------------- |
+| General Regression   | MAE      | Average absolute error |
+| Large Errors Matter  | RMSE     | Penalizes big mistakes |
+| Business Forecasting | MAPE     | Percentage error       |
+| Model Comparison     | R² Score | Variance explained     |
+| Robust to Outliers   | MAE      | Less affected          |

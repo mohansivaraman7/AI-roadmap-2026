@@ -1,0 +1,24 @@
+Neural networks learn through backpropagation.
+
+Gradients tell weights how to change.
+
+Very small gradients mean some weights learn extremely slowly.
+
+RNNs can suffer from this problem across long sequences.
+
+LSTMs were designed to help retain information and improve gradient flow.
+
+Transformers use attention instead of recurrence, but they are not immune to training difficulties.
+
+1. What is a vanishing gradient?
+
+Vanishing gradient occurs when the gradients used to update a neural network's weights become extremely small during training.
+As a result, some earlier layers learn very slowly or almost stop learning.
+First, students need to understand one thing:
+
+Forward propagation: Data travels from input to output, and the network makes a prediction.
+
+Backpropagation: The network calculates how to adjust its weights based on the prediction error.
+
+Gradient: Tells the network how the loss changes when a weight changes.
+It helps determine how to update that weight.

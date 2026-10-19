@@ -1,0 +1,39 @@
+SLIDE 04 / 12  -  lora_alpha: the volume knob
+Image: 04_lora_alpha.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+How lora_alpha controls the STRENGTH of the LoRA update, with examples and
+practical rules.
+
+THE FORMULA
+  output = W.x + (alpha / r) . B.A.x
+The LoRA part is multiplied by alpha / r before being added.
+Example: r = 8, alpha = 16 -> scale = 2.
+
+ANALOGY
+  r     = HOW MANY ideas the adapter can learn (capacity)
+  alpha = HOW LOUDLY those ideas are applied (strength / volume knob)
+
+EXAMPLES
+  r = 8,  alpha = 16  -> scale 2   most common (alpha = 2r)
+  r = 16, alpha = 32  -> scale 2   same strength, more capacity
+  r = 8,  alpha = 8   -> scale 1   conservative (alpha = r)
+  r = 4,  alpha = 8   -> scale 2   small adapter, same strength
+
+WHY DIVIDE BY r?
+Without dividing, a bigger r would silently make the update bigger, and you
+would need to re-tune the learning rate every time you changed r. Dividing by r
+keeps the update size steady, so r controls capacity and alpha controls
+strength, separately.
+
+HIGHER vs LOWER ALPHA
+- Higher alpha: stronger push away from the original model, faster learning,
+  but training can become unstable.
+- Lower alpha: gentler change, the model stays closer to the original.
+
+IN PRACTICE
+- Fix alpha (usually 2 x r) and tune the learning rate instead.
+- If the loss jumps around, lower alpha or the learning rate.
+- If you change r, change alpha with it (r = 4 -> alpha = 8,
+  r = 16 -> alpha = 32) to keep the same scaling.
+- Alpha has no effect at step 0, because B starts at zero.

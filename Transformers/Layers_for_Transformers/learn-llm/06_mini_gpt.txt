@@ -1,0 +1,173 @@
+======================================================================
+ 06 — MINI-GPT: A LANGUAGE MODEL FROM SCRATCH
+ Program: 06_mini_gpt.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 What a language model actually does
+----------------------------------------------------------------------
+A language model does ONE thing: given some text, predict the NEXT token.
+
+   "The cat sat on the"  ->  mat: 41%, floor: 22%, sofa: 9%, ...
+
+That's it. ChatGPT, Claude, Llama — at their core, all next-token predictors.
+Chatting, coding, summarising all emerge from doing this one task
+extremely well, on enormous amounts of text.
+
+GPT = Generative Pre-trained Transformer
+   Generative  : it produces text
+   Pre-trained : trained on lots of raw text first (before any fine-tuning)
+   Transformer : the architecture from steps 3–5 (with a causal mask)
+
+
+1.2 Training = "guess the next character" millions of times
+----------------------------------------------------------------------
+Take any text. Every position is a free training example:
+
+   text:    a   t  t  e  n  t  i  o  n
+   input:   a   t  t  e  n  t  i  o
+   target:  t   t  e  n  t  i  o  n      <- the input shifted by ONE
+
+No human labels needed — the text labels itself. This is called
+SELF-SUPERVISED learning, and it's why LLMs can learn from the whole internet.
+
+Because of the causal mask, one sentence of length T gives T predictions
+in ONE pass, all in parallel — this is why Transformers train so fast.
+
+
+1.3 Generation = predict, append, repeat
+----------------------------------------------------------------------
+   "a "            -> model predicts "t"   -> "a t"
+   "a t"           -> model predicts "r"   -> "a tr"
+   "a tr"          -> ...                  -> "a transformer stacks..."
+
+This is called AUTOREGRESSIVE generation: each output becomes part of
+the next input. It's why chatbots "type" one token at a time.
+
+TEMPERATURE controls randomness when picking the next token:
+   divide scores by temperature before softmax
+   low  (0.2) : almost always the top choice -> safe, repetitive
+   1.0        : sample from the model's real probabilities
+   high (1.5) : more surprising, more mistakes
+SAMPLING (torch.multinomial) means picking randomly according to the
+percentages, rather than always taking the top one.
+
+
+1.4 CONTEXT WINDOW
+----------------------------------------------------------------------
+The model can only see the last CTX tokens (32 characters here).
+Older text falls off. Real LLMs: 8K to 1M+ tokens. This is the
+"context length" you see advertised for LLMs.
+
+
+1.5 From mini-GPT to a real LLM — what changes?
+----------------------------------------------------------------------
+                     our mini-GPT          real LLM
+   tokens            characters (27)       sub-words (~50K–200K)
+   training text     ~6,500 characters     trillions of tokens
+   parameters        ~105,000              billions to trillions
+   layers            2                     dozens to 100+
+   context           32                    thousands to millions
+   training time     30 seconds            months on thousands of GPUs
+   + after pre-training: fine-tuning and RLHF to make it a helpful assistant
+
+THE RECIPE IS THE SAME. Scale is what makes it smart.
+
+IMPORTANT HONEST NOTE: our tiny model mostly MEMORISES its tiny text
+(it reproduces the training sentences). That's expected — it has seen
+only 6 sentences. Real LLMs see so much varied text that memorising
+is impossible, so they are forced to learn general patterns of language.
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+tokenizer        : converts text <-> token IDs (here: stoi / chars)
+stoi             : "string to integer" dictionary, e.g. {'a': 1, 'b': 2}
+encode / decode  : text -> list of IDs, and back
+V                : vocabulary size (27 characters)
+CTX              : context length (32 characters)
+D, HEADS, LAYERS : model width (64), heads (4), number of blocks (2)
+get_batch        : picks random 32-character chunks + their shifted targets
+logits           : raw scores for every possible next token
+temperature      : randomness control during generation
+torch.multinomial: random sampling according to probabilities
+torch.cat        : append the new token to the sequence
+AdamW            : the optimizer used for nearly all LLMs
+loss ≈ ln(V)     : loss of random guessing (ln 27 ≈ 3.3)
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+--- 1. Data + tokenizer ---
+  text = """...six sentences...""" * 20
+-> Our training data: the course summary, repeated 20 times.
+
+  chars = sorted(set(text))
+  stoi  = {c: i for i, c in enumerate(chars)}
+-> Find every unique character and give it a number. That's our tokenizer.
+
+  def get_batch(n=32):
+      x = data[i : i+CTX]
+      y = data[i+1 : i+CTX+1]
+-> Pick 32 random windows. y is x shifted by one = "the next character"
+   at every position (section 1.2).
+
+--- 2–3. The model ---
+  class Block: identical to step 5, but now with attn_mask=mask (causal).
+
+  class MiniGPT:
+      self.tok  = nn.Embedding(V, D)     # WHAT each token is
+      self.pos  = nn.Embedding(CTX, D)   # WHERE it is (learned positions)
+      self.blocks = 2 x Block
+      self.ln   = final LayerNorm
+      self.head = nn.Linear(D, V)        # vector -> a score for each of the 27 characters
+
+  forward(idx):
+      x = self.tok(idx) + self.pos(torch.arange(T))   # token + position
+      mask = torch.triu(..., 1)                        # no peeking ahead
+      for b in self.blocks: x = b(x, mask)             # the Transformer stack
+      return self.head(self.ln(x))                     # scores for next char
+-> This is the full GPT architecture in ~10 lines.
+   Output shape: (batch, T, 27) = a next-char prediction at EVERY position.
+
+  generate(idx, n, temperature):
+      logits = self(idx[:, -CTX:])[:, -1] / temperature
+-> Feed the last CTX characters, keep only the LAST position's scores
+   (that's the prediction for what comes next), apply temperature.
+      nxt = torch.multinomial(torch.softmax(logits, -1), 1)
+      idx = torch.cat([idx, nxt], dim=1)
+-> Sample one character, append it, loop. Autoregressive generation.
+
+--- 4. Training ---
+  loss = cross_entropy(model(x).reshape(-1, V), y.reshape(-1))
+-> Flatten (32 batches x 32 positions) into 1,024 predictions and
+   compare each with its correct next character. Then the usual
+   backward + step. Every 500 steps, print a sample so we can watch it learn.
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+   parameters: 105,627
+   step    0 | loss 3.44 | a agrb,wl.g  u / kpanxco...     <- random characters
+   step  500 | loss 0.12 | a model look back at every word...  <- real sentences!
+   step 1500 | loss 0.10 | a transformer stacks attention and feed forward layers.
+
+Loss starts at ~3.3 = random guessing among 27 characters (ln 27).
+Within a few hundred steps it learns spelling, spaces and full sentences.
+"/" in the printout stands for a newline.
+
+
+PART 5: DISCUSSION QUESTIONS & EXPERIMENTS
+======================================================================
+1. Set temperature=0.1 and then 2.0 in generate(). Compare the outputs.
+2. Replace `text` with a few paragraphs from a public-domain book.
+   Does it still memorise, or start to invent new "words"?
+3. Set LAYERS = 1 and D = 16. How does the final loss change?
+4. Why can't a model with CTX = 32 finish a sentence that started 50 characters earlier?
+5. In one sentence, what's the difference between this and ChatGPT?
+   (Scale of data and model, sub-word tokens, and post-training to follow instructions.)
+
+ONE-LINE SUMMARY: A GPT is a stack of causal Transformer blocks trained
+to predict the next token; generating text is just repeating that prediction.

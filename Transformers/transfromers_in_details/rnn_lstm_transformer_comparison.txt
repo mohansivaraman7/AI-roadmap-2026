@@ -1,0 +1,90 @@
+RNN vs LSTM vs TRANSFORMER - COMPARISON
+===========================================================================================================================
+
++==========================+============================+==============================+==================================+
+| Feature                  | RNN                        | LSTM                         | Transformer                      |
++==========================+============================+==============================+==================================+
+| Introduced               | 1980s (Elman network,      | 1997, Hochreiter &           | 2017, Vaswani et al., 'Attention |
+|                          | 1990)                      | Schmidhuber                  | Is All You Need'                 |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Main mechanism           | Recurrent hidden state     | Recurrent state + memory     | Self-attention                   |
+|                          |                            | gates (forget, input,        |                                  |
+|                          |                            | output)                      |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| How it reads text        | One token at a time, left  | One token at a time, left to | All tokens at once               |
+|                          | to right                   | right                        |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Sequential processing    | Yes                        | Yes                          | No for reading input; YES for    |
+|                          |                            |                              | generating output (one token at  |
+|                          |                            |                              | a time)                          |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Training speed           | Slow: step 5 must wait for | Slower than RNN: more        | Fast: parallel across tokens,    |
+|                          | step 4                     | calculations per step        | fits GPUs well                   |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Long-range dependencies  | Struggles; early words     | Better: cell state can carry | Strong: any token can attend     |
+|                          | fade                       | information far              | directly to any other            |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Path from word 1 to word | 99 steps                   | 99 steps (gates protect the  | 1 step                           |
+| 100                      |                            | signal)                      |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Memory mechanism         | Hidden state               | Cell state (long-term) +     | Attention over all token         |
+|                          |                            | hidden state (short-term)    | representations                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Size of memory           | Fixed: whole past squeezed | Fixed: two vectors           | Grows with input: keeps every    |
+|                          | into one vector            |                              | token                            |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Vanishing gradient       | Serious problem            | Reduced by gates             | Reduced by residual connections  |
+|                          |                            |                              | and direct attention paths       |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Word order               | Built in (reads in order)  | Built in (reads in order)    | Not built in: needs positional   |
+|                          |                            |                              | encoding                         |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Cost as input gets       | Grows linearly (n)         | Grows linearly (n)           | Attention grows with length      |
+| longer                   |                            |                              | squared (n^2)                    |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Memory while generating  | Constant                   | Constant                     | Grows with length (stores past   |
+|                          |                            |                              | keys and values)                 |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Parameters per layer     | Fewest                     | About 4x an RNN of the same  | Most (attention + feed-forward)  |
+|                          |                            | size                         |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Scaling                  | Hard to make large         | Hard beyond a few layers     | Scales to billions of parameters |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Data needed              | Can work with small data   | Can work with small data     | Works best with large data or    |
+|                          |                            |                              | pre-training                     |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Pre-trained models       | Rare                       | Some (e.g., ELMo, 2018)      | Many: BERT, GPT, Llama, T5       |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Interpretability         | Hard to inspect            | Hard to inspect; gate values | Attention maps can be visualised |
+|                          |                            | give some hints              | (useful, not a full explanation) |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Typical models           | Simple RNN                 | LSTM, BiLSTM, GRU            | BERT, GPT, Claude, Llama, ViT,   |
+|                          |                            | (simplified LSTM)            | Whisper                          |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Common applications      | Simple sequence and time-  | Time series, speech,         | LLMs, translation, search, code, |
+|                          | series tasks               | handwriting, keyboard        | vision, speech, multimodal AI    |
+|                          |                            | prediction                   |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Main weakness            | Forgets long context;      | Still sequential; limited    | Expensive for very long inputs;  |
+|                          | can't train in parallel    | for very long text           | needs lots of data and compute   |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+| Analogy                  | Reading with a short       | Reading page by page with a  | Seeing the whole page at once    |
+|                          | memory and no notes        | notebook, deciding what to   | and linking related words        |
+|                          |                            | write and erase              |                                  |
++--------------------------+----------------------------+------------------------------+----------------------------------+
+
+KEY POINTS
+----------
+1. The real breakthrough was PARALLEL TRAINING. Transformers train much faster on GPUs,
+   which made models with billions of parameters possible.
+2. Transformers are parallel while READING, but sequential while WRITING.
+   ChatGPT and Claude still generate one token at a time.
+3. It is a trade-off: RNN/LSTM are cheap per step but forgetful and slow to train;
+   Transformers see everything directly but get expensive for very long inputs.
+4. Each model fixed the previous one's problem:
+   RNN (forgets)  ->  LSTM (adds gates to remember)  ->  Transformer (replaces recurrence with attention)
+5. LSTMs are still useful for small datasets, sensor/time-series data and small devices.
+
+ONE-LINE SUMMARY:
+An RNN passes a note from word to word, an LSTM passes a better-organised note,
+and a Transformer lets every word read every other word directly.

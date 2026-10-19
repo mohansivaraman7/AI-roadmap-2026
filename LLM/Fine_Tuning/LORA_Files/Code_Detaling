@@ -1,0 +1,15 @@
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+a. We used hugging face library
+b. we use two different modules
+   b.1 AutoTokenizer - one to convert word to numbers
+   b.2 AutoModelForSequenceClassification - one to pick only the data which is of classifier
+   or classification type
+
+model_name = "bert-base-uncased"
+a. Model we use here in "bert-base-uncased"
+
+    bert    — Bidirectional Encoder Representations from Transformers.
+    base    — The base-sized version of BERT, with 12 transformer encoder layers and
+              approximately 110 million parameters.
+    uncased — Text is normalized to lowercase, so HELLO, Hello, and hello are
+              treated alike during tokenization.

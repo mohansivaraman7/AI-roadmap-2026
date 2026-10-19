@@ -1,0 +1,16 @@
+                Training Data
+                      │
+      ┌───────────────┼───────────────┐
+      │               │               │
+Decision Tree   Random Forest      SVM
+      │               │               │
+ Predictions     Predictions     Predictions
+      └───────────────┼───────────────┘
+                      │
+          New Training Dataset
+      [DT_pred, RF_pred, SVM_pred]
+                      │
+            Logistic Regression
+                (Meta Model)
+                      │
+              Final Prediction

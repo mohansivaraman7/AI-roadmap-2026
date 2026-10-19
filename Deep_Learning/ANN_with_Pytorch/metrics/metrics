@@ -1,0 +1,10 @@
+| Metric                | scikit-learn | TensorFlow                                   | PyTorch                           |
+| --------------------- | ------------ | -------------------------------------------- | --------------------------------- |
+| Accuracy              | ✅            | ✅                                            | Via TorchMetrics or `sklearn`     |
+| Precision             | ✅            | ✅                                            | Via TorchMetrics or `sklearn`     |
+| Recall                | ✅            | ✅                                            | Via TorchMetrics or `sklearn`     |
+| F1 Score              | ✅            | Possible as a metric (or external libraries) | Via TorchMetrics or `sklearn`     |
+| Confusion Matrix      | ✅            | ✅ (`tf.math.confusion_matrix`)               | Usually `sklearn` or TorchMetrics |
+| Classification Report | ✅            | ❌                                            | ❌                                 |
+| ROC Curve             | ✅            | Partial support                              | Usually `sklearn` or TorchMetrics |
+| AUC                   | ✅            | ✅                                            | Via TorchMetrics or `sklearn`     |

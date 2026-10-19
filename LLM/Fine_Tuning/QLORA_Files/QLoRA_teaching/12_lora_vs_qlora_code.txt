@@ -1,0 +1,40 @@
+SLIDE 12 / 12  -  LoRA -> QLoRA: what changes in the code
+Image: 12_lora_vs_qlora_code.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The LoRA setup code (left) and the QLoRA setup code (right), side by side and
+lined up. The highlighted lines on the right are the ONLY changes.
+
+THE CHANGES
+1. Extra imports:
+     from transformers import BitsAndBytesConfig
+     from peft import prepare_model_for_kbit_training
+     import bitsandbytes as bnb
+2. The 4-bit config:
+     bnb_config = BitsAndBytesConfig(load_in_4bit=True,
+         bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16,
+         bnb_4bit_use_double_quant=True)
+3. Pass it when loading the model:
+     quantization_config=bnb_config, device_map="auto"
+4. Prepare the 4-bit model for training:
+     model = prepare_model_for_kbit_training(model)
+5. (Recommended) the paged 8-bit optimizer:
+     optimizer = bnb.optim.PagedAdamW8bit(params, lr=2e-4)
+
+WHAT STAYS EXACTLY THE SAME
+- LoraConfig: r, lora_alpha, target_modules, task_type
+- get_peft_model(model, config)
+- The training loop: forward, loss.backward(), optimizer.step(),
+  optimizer.zero_grad()
+- Testing and prediction
+- Saving: model.save_pretrained(...) still saves only the small adapter
+
+LOADING THE SAVED QLoRA ADAPTER LATER (Program 3 in the notebook)
+  base = AutoModel...from_pretrained(base_name,
+             quantization_config=bnb_config, device_map="auto")
+  model = PeftModel.from_pretrained(base, "my-qlora-adapter")
+Load the base in 4-bit again so it matches the training setup.
+
+ONE-LINE SUMMARY FOR CLASS
+QLoRA = LoRA + "load the frozen model in 4-bit". The adapters and the
+training loop do not change at all.

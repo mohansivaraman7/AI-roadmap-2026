@@ -1,0 +1,121 @@
+======================================================================
+ 02 — ATTENTION
+ Program: 02_attention.py
+======================================================================
+
+PART 1: THE THEORY
+======================================================================
+
+1.1 Where we are
+----------------------------------------------------------------------
+Around 2014, translation used two LSTMs (a "seq2seq" model):
+
+   ENCODER LSTM reads English:  I -> love -> cats -> [one vector h]
+   DECODER LSTM writes French from that ONE vector:  Je -> aime -> les chats
+
+Problem: a 40-word sentence must be squeezed into one vector.
+Like reading a whole page, closing the book, then translating from memory.
+Quality dropped sharply for long sentences.
+
+
+1.2 The idea (Bahdanau et al., 2014)
+----------------------------------------------------------------------
+Don't throw away the encoder's per-word vectors. Keep ALL of them.
+When the decoder writes each word, let it LOOK BACK at every input word
+and decide which ones matter right now.
+
+   Writing "Je"         -> look mostly at "I"
+   Writing "aime"       -> look mostly at "love"
+   Writing "les chats"  -> look mostly at "cats"
+
+ANALOGY: A human translator keeps the original page open and glances
+back at the relevant words while writing. That glance is attention.
+
+
+1.3 Query, Key, Value — the vocabulary of attention
+----------------------------------------------------------------------
+Think of a LIBRARY SEARCH:
+   QUERY (Q) : what you're looking for ("books about animals")
+   KEY   (K) : the label on each book (each book's "what I'm about")
+   VALUE (V) : the content of each book (what you actually take away)
+
+Attention in 3 steps:
+   1. SCORE    score_i = Q · K_i       how well does each key match the query?
+   2. NORMALISE weights = softmax(scores)   turn scores into percentages
+   3. MIX      context = Σ weight_i * V_i  blend the values by those percentages
+
+The result (context) is a SOFT lookup: instead of picking one book,
+you take 91% of one, 5% of another, 4% of a third.
+
+Why "soft"? Because softmax is smooth, the model can be TRAINED with
+gradients. A hard "pick one" can't be trained this way.
+
+
+1.4 What attention fixed (and what it didn't)
+----------------------------------------------------------------------
+FIXED:   the bottleneck — each output word gets its own custom view of the input.
+BONUS:   interpretability — we can print the weights and SEE what the model looked at.
+NOT YET: the encoder and decoder are still LSTMs -> still slow, step by step.
+         Step 3 removes the LSTM completely.
+
+
+PART 2: NEW TERMS IN THIS PROGRAM
+======================================================================
+encoder         : the part that reads the input
+decoder         : the part that writes the output
+query / key / value : see section 1.3
+attention weights   : the percentages from softmax (sum to 1)
+context vector      : the weighted mix of values
+enc             : our 3 hand-made "encoder vectors", one per English word
+
+
+PART 3: CODE WALKTHROUGH
+======================================================================
+
+  enc = torch.tensor([[1.0, 0.0, 0.0, 0.2],    # I
+                      [0.0, 1.0, 0.0, 0.1],    # love
+                      [0.0, 0.0, 1.0, 0.3]])   # cats
+-> In a real model, an LSTM would produce these vectors and they'd be
+   unreadable. We HAND-MADE them so the meaning is obvious:
+   position 0 = "person-ness", 1 = "emotion-ness", 2 = "animal-ness".
+
+  def attention(query, keys, values):
+      scores  = keys @ query                  # step 1: dot product with each word
+      weights = torch.softmax(scores, dim=0)  # step 2: percentages
+      context = weights @ values              # step 3: weighted mix
+-> This IS attention. Three lines. Everything later is a variation of it.
+   Here keys and values are both `enc` (common in simple attention).
+
+  decoder_steps = {"Je (needs a person)": torch.tensor([3.0, 0, 0, 0]), ...}
+-> The query for each French word. [3,0,0,0] means "I want person-ness".
+   In a real model the decoder LSTM would produce this query itself.
+
+  Worked example for "Je": query = [3, 0, 0, 0]
+     score(I)    = 3*1 + 0 + 0 + 0 = 3
+     score(love) = 0
+     score(cats) = 0
+     softmax([3, 0, 0]) = [0.91, 0.05, 0.05]   -> 91% on "I"
+   Do this by hand on the board — it makes attention click.
+
+
+PART 4: READING THE OUTPUT
+======================================================================
+   writing Je        -> looks at  I:91%  love:5%  cats:5%
+   writing aime      -> looks at  I:5%   love:91% cats:5%
+   writing les chats -> looks at  I:5%   love:5%  cats:91%
+
+Each output word has its OWN attention distribution. No bottleneck.
+Note it's never exactly 100% — softmax always gives everyone a little.
+
+
+PART 5: DISCUSSION QUESTIONS
+======================================================================
+1. Change the "Je" query to [3, 3, 0, 0]. What are the weights? Why?
+   (Split ~50/50 between "I" and "love".)
+2. Change 3.0 to 10.0. What happens? (Sharper: ~100% on one word.)
+   This is why scaling matters later (√d in step 3).
+3. What is the difference between a key and a value? Could they be different?
+   (Yes — in step 3 they come from different learned matrices.)
+
+ONE-LINE SUMMARY: Attention lets the model look back at ALL inputs and
+take a weighted mix, where the weights come from query·key similarity.

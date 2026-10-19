@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/hp/Desktop/Uptor_AI_ML/ML_OPS/uptor_002_ai_ml_api-complete/mlruns/516591218540838922/f221f762e0df44fa80e955cb08cb6397/artifacts
+end_time: 1789800168391
+entry_point_name: ''
+experiment_id: '516591218540838922'
+lifecycle_stage: active
+run_id: f221f762e0df44fa80e955cb08cb6397
+run_name: adaptable-conch-937
+run_uuid: f221f762e0df44fa80e955cb08cb6397
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1789800168387
+status: 4
+tags: []
+user_id: hp

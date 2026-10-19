@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /mlflow
+
+# Full mlflow package (not mlflow-skinny) — this container runs the
+# tracking server + UI, which the skinny client package doesn't include.
+RUN pip install --no-cache-dir mlflow
+
+EXPOSE 5000
+
+# Backend store (run/param/metric metadata) and artifact store (logged
+# models) both live under /mlflow, which docker-compose mounts as a
+# named volume so tracking history survives container restarts.
+# --allowed-hosts: newer MLflow versions reject requests whose Host header
+# isn't on an explicit allowlist, to block DNS-rebinding attacks. The
+# default list only covers localhost/private IPs, so every hostname this
+# server is actually reached by has to be added explicitly: "mlflow" is
+# the Docker Compose service name, "mlflow-service" (plus its full
+# cluster-DNS form) is the Kubernetes Service name from k8s/mlflow-service.yaml
+# and k8s/mlflow-deployment.yaml — same image, two different networks — and
+# the localhost addresses are where the UI is reached from your host machine.
+CMD ["mlflow", "server", \
+     "--backend-store-uri", "sqlite:///mlflow/mlflow.db", \
+     "--default-artifact-root", "/mlflow/artifacts", \
+     "--host", "0.0.0.0", \
+     "--port", "5000", \
+     "--allowed-hosts", "mlflow:5000,mlflow,mlflow-service:5000,mlflow-service,mlflow-service.default.svc.cluster.local:5000,mlflow-service.default.svc.cluster.local,localhost:5001,127.0.0.1:5001,localhost,127.0.0.1"]

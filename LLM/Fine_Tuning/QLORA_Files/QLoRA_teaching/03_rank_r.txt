@@ -1,0 +1,45 @@
+SLIDE 03 / 12  -  r: the rank of the LoRA matrices
+Image: 03_rank_r.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+A bar chart of how many trainable numbers LoRA adds to ONE 768 x 768 layer for
+different values of r, plus guidance on choosing r.
+
+THE MOST IMPORTANT POINT
+r is a SIZE, not a percentage. r = 8 does NOT mean 8% of parameters.
+r is the shared middle dimension of A (r x 768) and B (768 x r): how many
+"directions" of change the adapter is able to learn.
+
+THE FORMULA
+  LoRA numbers per layer = r x (input size + output size)
+  For a 768 x 768 layer:   r x (768 + 768) = r x 1,536
+
+  r = 1   ->   1,536  (0.3% of the layer)
+  r = 2   ->   3,072  (0.5%)
+  r = 4   ->   6,144  (1.0%)
+  r = 8   ->  12,288  (2.1%)   <- common default
+  r = 16  ->  24,576  (4.2%)
+  r = 64  ->  98,304  (16.7%)
+
+WHOLE-MODEL EXAMPLE (BERT)
+r = 8 on query + value, in all 12 layers:
+  12,288 x 2 matrices x 12 layers = 294,912 numbers
+  294,912 / ~110 million = about 0.27% of BERT
+
+HOW TO CHOOSE r
+  1 - 4    simple task, small dataset (e.g. sentiment)
+  8        default starting point
+  16 - 32  harder task, more data
+  64+      big domain shift (medical, legal, a new language)
+
+RULES OF THUMB
+- Any whole number >= 1 works. Powers of 2 (2, 4, 8, 16...) are just habit.
+- Small dataset -> keep r small, or the adapter can overfit.
+- Try r = 4, 8, 16 and keep the smallest one that performs well.
+- The same r gives a different % on every model, because layer sizes differ.
+  Always check with: model.print_trainable_parameters()
+
+CLASS EXERCISE
+Run the LoRA/QLoRA program with r = 1, 2, 8, 32. Compare the trainable
+parameter count and the final accuracy. Usually accuracy barely changes while
+parameters grow a lot, which shows why small ranks are enough.

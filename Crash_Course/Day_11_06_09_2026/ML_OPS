@@ -1,0 +1,53 @@
+MLOps: Segment by Segment
+
+Segment 1: What MLOps Is
+
+MLOps (Machine Learning Operations) is the practice of applying
+DevOps-style discipline to machine learning systems —
+the processes and tooling that let teams
+build,
+deploy,
+monitor, and
+maintain ML models reliably in production,
+instead of leaving them as one-off notebooks only one person understands.
+
+Segment 2: Why It's Needed
+
+Regular software has one moving part that changes:
+code. ML systems have three: code, data, and the trained model itself —
+and each can change independently and silently break things.
+Data drifts over time,
+the real world shifts away from what the model was trained on,
+and a model that looked great in testing can quietly degrade in
+production with no one noticing until something goes wrong downstream.
+
+Segment 3: The Core Components
+Versioning — tracking not just code, but also datasets and trained models,
+ so you can always trace which data + code produced which model.
+Pipelines —
+automated workflows for data validation,
+training,
+evaluation,
+and deployment, so shipping a new model doesn't require manual, error-prone steps each time.
+Note: Jenkins, Concourse, GITHUB Actions
+Monitoring — watching production models for drift,
+data changes,
+and accuracy decay,
+not just server uptime and latency.
+Governance — reproducibility and rollback, so a bad model version can be reverted quickly.
+
+Segment 4: Common Tools by Job
+Experiment tracking: MLflow, Weights & Biases
+Feature store: Feast, Tecton
+Model registry: MLflow Registry, SageMaker Model Registry
+Pipeline orchestration: Kubeflow, Airflow, SageMaker Pipelines, Vertex AI Pipelines
+Model serving: BentoML, Seldon, or built-in cloud serving
+All-in-one platforms: AWS SageMaker, Google Vertex AI, Azure ML
+
+Segment 5: A Typical Workflow
+Data is validated and versioned.
+A training pipeline runs (scheduled or triggered by new data).
+The new model is evaluated against a held-out set and compared to the current production model.
+If it passes, it's promoted through staging into production.
+Production traffic is monitored for drift or degraded performance,
+with alerts or automated rollback if things go wrong.

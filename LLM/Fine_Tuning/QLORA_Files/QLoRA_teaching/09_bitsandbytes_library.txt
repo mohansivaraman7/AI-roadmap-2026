@@ -1,0 +1,54 @@
+SLIDE 09 / 12  -  bitsandbytes (bnb): the engine behind QLoRA
+Image: 09_bitsandbytes_library.png
+==============================================================================
+WHAT THE SLIDE SHOWS
+The four main features of the bitsandbytes library, the three pieces the full
+QLoRA recipe uses, hardware requirements, common errors and a quick check.
+
+WHAT IT IS
+"bnb" = bitsandbytes, an open-source library created by Tim Dettmers (author
+of the QLoRA paper). It provides fast GPU code for running and training models
+in low precision. BitsAndBytesConfig only passes your settings to it; you
+rarely import it directly because transformers and peft call it for you.
+Install: pip install bitsandbytes
+
+ITS FOUR MAIN FEATURES
+1. 4-bit quantization (NF4, FP4) - shrinks the MODEL.
+   Used as: load_in_4bit=True
+2. LLM.int8() - 8-bit loading that keeps rare "outlier" values in 16-bit for
+   accuracy. Used as: load_in_8bit=True
+3. 8-bit optimizers - stores the optimizer's internal state (e.g. AdamW's) in
+   8-bit, shrinking the OPTIMIZER. Used as: optim="adamw_bnb_8bit" or
+   bnb.optim.AdamW8bit(...)
+4. Paged optimizers - moves optimizer memory to CPU RAM when the GPU runs
+   short, avoiding out-of-memory crashes. Used as: optim="paged_adamw_8bit"
+   or bnb.optim.PagedAdamW8bit(...)
+
+THE FULL QLoRA RECIPE USES THREE bnb PIECES
+1. NF4 for the frozen model
+2. Double quantization for the scale factors
+3. A paged optimizer for memory spikes
+
+HARDWARE
+Built for NVIDIA GPUs with CUDA - fully supported and fastest there. Newer
+versions add partial support for other hardware, but use a GPU runtime for
+class. On a CPU-only runtime, load_in_4bit=True usually fails.
+
+COMMON ERRORS AND FIXES
+  No GPU found / CUDA not available
+      -> Runtime -> Change runtime type -> GPU
+  bitsandbytes not installed / import error
+      -> pip install -U bitsandbytes, then restart the session
+  bfloat16 errors on a T4
+      -> use torch.float16 as bnb_4bit_compute_dtype
+  Version mismatch errors
+      -> pip install -U bitsandbytes transformers peft accelerate
+
+QUICK CHECK THAT bnb WORKS
+  import torch, bitsandbytes as bnb
+  print(torch.cuda.is_available())   # must be True
+  print(bnb.__version__)
+
+ONE-LINE SUMMARY
+bnb shrinks the MODEL (4/8-bit loading) and the OPTIMIZER (8-bit, paged), so
+big models fit on small GPUs.
